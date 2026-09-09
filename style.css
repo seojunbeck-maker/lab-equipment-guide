@@ -1,15 +1,93 @@
 body {
+    margin: 0;
     font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+}
+
+.container {
+    width: 90%;
     max-width: 800px;
-    margin: 50px auto;
-    padding: 20px;
+    margin: 60px auto;
+    text-align: center;
 }
 
 h1 {
-    text-align: center;
+    margin-bottom: 10px;
+}
+
+.description {
+    margin-bottom: 30px;
+}
+
+.upload-box {
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    border: 2px dashed #cccccc;
+}
+
+#imageInput {
+    margin: 20px 0;
+}
+
+#previewArea {
+    width: 100%;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+#imagePreview {
+    display: none;
+    max-width: 100%;
+    max-height: 400px;
 }
 
 button {
     margin-top: 20px;
-    padding: 10px 20px;
+    padding: 12px 25px;
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.guide {
+    font-size: 14px;
+    margin-top: 15px;
+}
+
+
+/* 분석 중 애니메이션 */
+
+.loader {
+    width: 50px;
+    height: 50px;
+    border: 6px solid #dddddd;
+    border-top: 6px solid #333333;
+    border-radius: 50%;
+    margin: 50px auto 20px;
+
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#loadingSection,
+#resultSection {
+    background-color: white;
+    padding: 50px;
+    border-radius: 10px;
 }
