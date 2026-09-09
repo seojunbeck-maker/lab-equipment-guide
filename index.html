@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실험기구 사용법 안내</title>
+
+    <title>실험기구 이미지 인식 안내 서비스</title>
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -11,18 +13,25 @@
 
 <main class="container">
 
-    <h1>실험기구 이미지 인식 안내 서비스</h1>
+    <header>
+        <h1>실험기구 이미지 인식 안내 서비스</h1>
 
-    <p class="description">
-        사용법을 알고 싶은 실험기구의 사진을 업로드하세요.
-    </p>
+        <p class="description">
+            사용법을 알고 싶은 실험기구의 사진을 업로드하세요.
+        </p>
+    </header>
 
-    <!-- 업로드 화면 -->
+
+    <!-- 이미지 업로드 화면 -->
     <section id="uploadSection">
 
         <div id="dropArea" class="upload-box">
 
-            <p>이미지를 선택하거나 이곳에 드래그하세요.</p>
+            <h2>실험기구 이미지 업로드</h2>
+
+            <p>
+                이미지를 선택하거나 이곳에 드래그하세요.
+            </p>
 
             <input
                 type="file"
@@ -32,7 +41,9 @@
 
             <p id="fileName"></p>
 
+
             <div id="previewArea">
+
                 <p id="previewText">
                     선택한 이미지가 여기에 표시됩니다.
                 </p>
@@ -41,53 +52,153 @@
                     id="imagePreview"
                     alt="업로드 이미지 미리보기"
                 >
+
             </div>
 
-            <button id="removeButton" style="display:none;">
+
+            <button
+                id="removeButton"
+                class="secondary-button"
+                style="display:none;"
+            >
                 이미지 제거
             </button>
 
         </div>
 
-        <p class="guide">
-            기구 전체가 잘 보이고 배경이 단순한 사진을 사용하는 것을 권장합니다.
-        </p>
 
-        <button id="analyzeButton" disabled>
-            분석하기
+        <div class="photo-guide">
+
+            <strong>촬영 안내</strong>
+
+            <p>
+                기구 전체가 보이도록 촬영하고 배경이 단순한 사진을 사용하는 것을 권장합니다.
+            </p>
+
+        </div>
+
+
+        <button
+            id="analyzeButton"
+            class="primary-button"
+            disabled
+        >
+            이미지 분석하기
         </button>
 
     </section>
 
 
-    <!-- 분석 중 화면 -->
-    <section id="loadingSection" style="display:none;">
+
+    <!-- 분석 중 -->
+    <section
+        id="loadingSection"
+        class="card"
+        style="display:none;"
+    >
 
         <div class="loader"></div>
 
-        <h2>이미지를 분석하고 있습니다.</h2>
+        <h2>
+            이미지를 분석하고 있습니다.
+        </h2>
 
         <p>
-            실험기구의 형태와 특징을 확인하는 중입니다.
+            Gemini가 실험기구의 형태와 특징을 분석하고 있습니다.
         </p>
 
     </section>
 
 
-    <!-- 임시 결과 화면 -->
-    <section id="resultSection" style="display:none;">
 
-        <h2>분석 완료</h2>
+    <!-- 분석 결과 -->
+    <section
+        id="resultSection"
+        class="card"
+        style="display:none;"
+    >
+
+        <h2>분석 결과</h2>
 
         <p>
-            다음 단계에서 실제 이미지 인식 결과를 연결할 예정입니다.
+            이미지와 가장 유사한 실험기구 후보입니다.
         </p>
 
-        <button id="retryButton">
+
+        <div id="candidateList"></div>
+
+
+        <p id="selectedResult">
+            선택된 기구가 없습니다.
+        </p>
+
+
+        <button
+            id="confirmButton"
+            class="primary-button"
+            disabled
+        >
+            이 기구로 선택
+        </button>
+
+
+        <button
+            id="retryButton"
+            class="secondary-button"
+        >
             다른 이미지 분석
         </button>
 
     </section>
+
+
+
+    <!-- 최종 선택 -->
+    <section
+        id="confirmSection"
+        class="card"
+        style="display:none;"
+    >
+
+        <h2>기구 선택 완료</h2>
+
+        <p id="confirmedEquipment"></p>
+
+        <p>
+            다음 단계에서 선택한 기구의 용도, 구조, 사용법 및 주의사항을
+            Supabase 데이터베이스와 연결하여 제공할 예정입니다.
+        </p>
+
+        <button
+            id="restartButton"
+            class="secondary-button"
+        >
+            처음으로
+        </button>
+
+    </section>
+
+
+    <!-- 오류 -->
+    <section
+        id="errorSection"
+        class="error-box"
+        style="display:none;"
+    >
+
+        <h2>분석 오류</h2>
+
+        <p id="errorMessage"></p>
+
+        <button
+            id="errorRetryButton"
+            class="secondary-button"
+        >
+            다시 시도
+        </button>
+
+    </section>
+
 
 </main>
 
