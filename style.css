@@ -56,6 +56,7 @@ h1 {
 }
 
 
+/* 업로드 */
 
 .upload-box {
     background-color: white;
@@ -77,11 +78,9 @@ h1 {
 }
 
 
-
 #imageInput {
     margin: 20px 0;
 }
-
 
 
 #fileName {
@@ -91,7 +90,6 @@ h1 {
 
     margin-bottom: 15px;
 }
-
 
 
 #previewArea {
@@ -113,11 +111,9 @@ h1 {
 }
 
 
-
 #previewText {
     color: #888888;
 }
-
 
 
 #imagePreview {
@@ -129,7 +125,6 @@ h1 {
 
     object-fit: contain;
 }
-
 
 
 .photo-guide {
@@ -145,6 +140,7 @@ h1 {
 }
 
 
+/* 버튼 */
 
 button {
     border: none;
@@ -163,7 +159,6 @@ button {
 }
 
 
-
 .primary-button {
     background-color: #222222;
 
@@ -171,11 +166,9 @@ button {
 }
 
 
-
 .primary-button:hover {
     opacity: 0.85;
 }
-
 
 
 .secondary-button {
@@ -185,6 +178,10 @@ button {
 }
 
 
+.secondary-button:hover {
+    background-color: #cccccc;
+}
+
 
 button:disabled {
     opacity: 0.4;
@@ -193,8 +190,7 @@ button:disabled {
 }
 
 
-
-/* 분석 중 로딩 */
+/* 로딩 */
 
 .loader {
     width: 55px;
@@ -213,7 +209,6 @@ button:disabled {
 }
 
 
-
 @keyframes spin {
 
     0% {
@@ -227,13 +222,11 @@ button:disabled {
 }
 
 
-
-/* 후보 */
+/* 분석 후보 */
 
 #candidateList {
     margin-top: 30px;
 }
-
 
 
 .candidate {
@@ -255,11 +248,9 @@ button:disabled {
 }
 
 
-
 .candidate:hover {
     border-color: #777777;
 }
-
 
 
 .candidate.selected {
@@ -269,13 +260,11 @@ button:disabled {
 }
 
 
-
 .candidate-name {
     font-size: 18px;
 
     font-weight: bold;
 }
-
 
 
 .confidence {
@@ -285,7 +274,6 @@ button:disabled {
 
     color: #555555;
 }
-
 
 
 .confidence-bar {
@@ -303,13 +291,11 @@ button:disabled {
 }
 
 
-
 .confidence-value {
     height: 100%;
 
     background-color: #444444;
 }
-
 
 
 .reason {
@@ -318,8 +304,9 @@ button:disabled {
     font-size: 14px;
 
     color: #666666;
-}
 
+    line-height: 1.5;
+}
 
 
 #selectedResult {
@@ -329,6 +316,63 @@ button:disabled {
 }
 
 
+/* Supabase 상세 정보 */
+
+#confirmedEquipment {
+    font-size: 24px;
+
+    margin-bottom: 20px;
+}
+
+
+#equipmentImage {
+    display: block;
+
+    max-width: 100%;
+
+    max-height: 350px;
+
+    object-fit: contain;
+
+    margin: 20px auto;
+
+    border-radius: 10px;
+}
+
+
+#equipmentDetails {
+    margin-top: 25px;
+
+    text-align: left;
+}
+
+
+.detail-box {
+    background-color: #f7f7f7;
+
+    padding: 18px;
+
+    margin-bottom: 12px;
+
+    border-radius: 8px;
+}
+
+
+.detail-box h3 {
+    margin-top: 0;
+
+    margin-bottom: 8px;
+}
+
+
+.detail-box p {
+    margin-bottom: 0;
+
+    line-height: 1.6;
+}
+
+
+/* 오류 */
 
 .error-box {
     background-color: white;
@@ -343,6 +387,7 @@ button:disabled {
 }
 
 
+/* 모바일 */
 
 @media (max-width: 600px) {
 

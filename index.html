@@ -22,7 +22,7 @@
     </header>
 
 
-    <!-- 이미지 업로드 화면 -->
+    <!-- 이미지 업로드 -->
     <section id="uploadSection">
 
         <div id="dropArea" class="upload-box">
@@ -41,7 +41,6 @@
 
             <p id="fileName"></p>
 
-
             <div id="previewArea">
 
                 <p id="previewText">
@@ -54,7 +53,6 @@
                 >
 
             </div>
-
 
             <button
                 id="removeButton"
@@ -72,7 +70,7 @@
             <strong>촬영 안내</strong>
 
             <p>
-                기구 전체가 보이도록 촬영하고 배경이 단순한 사진을 사용하는 것을 권장합니다.
+                기구 전체가 잘 보이고 배경이 단순한 사진을 사용하는 것을 권장합니다.
             </p>
 
         </div>
@@ -89,7 +87,6 @@
     </section>
 
 
-
     <!-- 분석 중 -->
     <section
         id="loadingSection"
@@ -99,16 +96,13 @@
 
         <div class="loader"></div>
 
-        <h2>
-            이미지를 분석하고 있습니다.
-        </h2>
+        <h2>이미지를 분석하고 있습니다.</h2>
 
         <p>
-            실험기구의 형태와 특징을 분석하고 있습니다.
+            실험기구의 형태와 특징을 확인하고 있습니다.
         </p>
 
     </section>
-
 
 
     <!-- 분석 결과 -->
@@ -124,14 +118,11 @@
             이미지와 가장 유사한 실험기구 후보입니다.
         </p>
 
-
         <div id="candidateList"></div>
-
 
         <p id="selectedResult">
             선택된 기구가 없습니다.
         </p>
-
 
         <button
             id="confirmButton"
@@ -140,7 +131,6 @@
         >
             이 기구로 선택
         </button>
-
 
         <button
             id="retryButton"
@@ -152,22 +142,51 @@
     </section>
 
 
-
-    <!-- 최종 선택 -->
+    <!-- Supabase 상세 정보 -->
     <section
         id="confirmSection"
         class="card"
         style="display:none;"
     >
 
-        <h2>기구 선택 완료</h2>
+        <h2>실험기구 정보</h2>
 
-        <p id="confirmedEquipment"></p>
+        <h3 id="confirmedEquipment"></h3>
 
-        <p>
-            다음 단계에서 선택한 기구의 용도, 구조, 사용법 및 주의사항을
-            Supabase 데이터베이스와 연결하여 제공할 예정입니다.
-        </p>
+        <img
+            id="equipmentImage"
+            alt="실험기구 대표 이미지"
+            style="display:none;"
+        >
+
+        <div id="equipmentDetails">
+
+            <div class="detail-box">
+                <h3>분야</h3>
+                <p id="detailCategory"></p>
+            </div>
+
+            <div class="detail-box">
+                <h3>용도</h3>
+                <p id="detailPurpose"></p>
+            </div>
+
+            <div class="detail-box">
+                <h3>구조</h3>
+                <p id="detailStructure"></p>
+            </div>
+
+            <div class="detail-box">
+                <h3>사용법</h3>
+                <p id="detailUsage"></p>
+            </div>
+
+            <div class="detail-box">
+                <h3>주의사항</h3>
+                <p id="detailCaution"></p>
+            </div>
+
+        </div>
 
         <button
             id="restartButton"
@@ -186,7 +205,7 @@
         style="display:none;"
     >
 
-        <h2>분석 오류</h2>
+        <h2>오류</h2>
 
         <p id="errorMessage"></p>
 
@@ -198,7 +217,6 @@
         </button>
 
     </section>
-
 
 </main>
 

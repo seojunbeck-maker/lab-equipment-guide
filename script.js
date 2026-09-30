@@ -61,10 +61,30 @@ const errorMessage =
     document.getElementById("errorMessage");
 
 
+const detailCategory =
+    document.getElementById("detailCategory");
+
+const detailPurpose =
+    document.getElementById("detailPurpose");
+
+const detailStructure =
+    document.getElementById("detailStructure");
+
+const detailUsage =
+    document.getElementById("detailUsage");
+
+const detailCaution =
+    document.getElementById("detailCaution");
+
+const equipmentImage =
+    document.getElementById("equipmentImage");
+
+
 let currentFile = null;
 
-let selectedEquipment = null;
+let currentImageURL = null;
 
+let selectedEquipment = null;
 
 
 /* =========================
@@ -89,12 +109,20 @@ function showImage(file) {
     currentFile = file;
 
 
-    const imageURL =
+    if (currentImageURL) {
+
+        URL.revokeObjectURL(
+            currentImageURL
+        );
+    }
+
+
+    currentImageURL =
         URL.createObjectURL(file);
 
 
     imagePreview.src =
-        imageURL;
+        currentImageURL;
 
 
     imagePreview.style.display =
@@ -118,7 +146,6 @@ function showImage(file) {
 }
 
 
-
 /* =========================
    파일 선택
 ========================= */
@@ -130,11 +157,9 @@ imageInput.addEventListener(
         const file =
             imageInput.files[0];
 
-
         showImage(file);
     }
 );
-
 
 
 /* =========================
@@ -154,7 +179,6 @@ dropArea.addEventListener(
 );
 
 
-
 dropArea.addEventListener(
     "dragleave",
     function () {
@@ -164,7 +188,6 @@ dropArea.addEventListener(
         );
     }
 );
-
 
 
 dropArea.addEventListener(
@@ -187,9 +210,8 @@ dropArea.addEventListener(
 );
 
 
-
 /* =========================
-   이미지 제거
+   이미지 초기화
 ========================= */
 
 removeButton.addEventListener(
@@ -198,34 +220,92 @@ removeButton.addEventListener(
 );
 
 
-
 function resetImage() {
 
     currentFile = null;
 
     imageInput.value = "";
 
+
+    if (currentImageURL) {
+
+        URL.revokeObjectURL(
+            currentImageURL
+        );
+
+        currentImageURL = null;
+    }
+
+
     imagePreview.src = "";
 
     imagePreview.style.display =
         "none";
 
+
     previewText.style.display =
         "block";
 
+
     fileName.textContent = "";
+
 
     removeButton.style.display =
         "none";
+
 
     analyzeButton.disabled =
         true;
 }
 
 
+/* =========================
+   파일 → Base64
+========================= */
+
+function fileToBase64(file) {
+
+    return new Promise(
+        function (resolve, reject) {
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                function () {
+
+                    const result =
+                        reader.result;
+
+
+                    const base64 =
+                        result.split(",")[1];
+
+
+                    resolve(base64);
+                };
+
+
+            reader.onerror =
+                function () {
+
+                    reject(
+                        new Error(
+                            "이미지를 읽을 수 없습니다."
+                        )
+                    );
+                };
+
+
+            reader.readAsDataURL(file);
+        }
+    );
+}
+
 
 /* =========================
-   분석 시작
+   이미지 분석
 ========================= */
 
 analyzeButton.addEventListener(
@@ -248,6 +328,9 @@ analyzeButton.addEventListener(
         resultSection.style.display =
             "none";
 
+        confirmSection.style.display =
+            "none";
+
         errorSection.style.display =
             "none";
 
@@ -267,6 +350,7 @@ analyzeButton.addEventListener(
                 await fetch(
                     "/api/analyze",
                     {
+
                         method: "POST",
 
                         headers: {
@@ -274,12 +358,16 @@ analyzeButton.addEventListener(
                                 "application/json"
                         },
 
-                        body: JSON.stringify({
-                            image: base64Image,
+                        body:
+                            JSON.stringify(
+                                {
+                                    image:
+                                        base64Image,
 
-                            mimeType:
-                                currentFile.type
-                        })
+                                    mimeType:
+                                        currentFile.type
+                                }
+                            )
                     }
                 );
 
@@ -331,67 +419,20 @@ analyzeButton.addEventListener(
 );
 
 
-
 /* =========================
-   파일 → Base64
-========================= */
-
-function fileToBase64(file) {
-
-    return new Promise(
-        function (
-            resolve,
-            reject
-        ) {
-
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-                function () {
-
-                    const result =
-                        reader.result;
-
-
-                    const base64 =
-                        result.split(",")[1];
-
-
-                    resolve(base64);
-                };
-
-
-            reader.onerror =
-                function () {
-
-                    reject(
-                        new Error(
-                            "이미지를 읽을 수 없습니다."
-                        )
-                    );
-                };
-
-
-            reader.readAsDataURL(file);
-        }
-    );
-}
-
-
-
-/* =========================
-   후보 출력
+   후보 표시
 ========================= */
 
 function showCandidates(candidates) {
 
     candidateList.innerHTML = "";
 
+
     selectedEquipment = null;
 
+
     confirmButton.disabled = true;
+
 
     selectedResult.textContent =
         "선택된 기구가 없습니다.";
@@ -402,9 +443,11 @@ function showCandidates(candidates) {
         candidates.length === 0
     ) {
 
-        throw new Error(
-            "분석 결과를 찾을 수 없습니다."
+        showError(
+            "적절한 실험기구 후보를 찾지 못했습니다."
         );
+
+        return;
     }
 
 
@@ -424,14 +467,16 @@ function showCandidates(candidates) {
 
             const confidence =
                 Math.round(
-                    candidate.confidence
+                    Number(
+                        candidate.confidence
+                    ) || 0
                 );
 
 
             item.innerHTML = `
 
                 <div class="candidate-name">
-                    ${candidate.name}
+                    ${escapeHTML(candidate.name)}
                 </div>
 
                 <div class="confidence">
@@ -449,7 +494,9 @@ function showCandidates(candidates) {
                 </div>
 
                 <div class="reason">
-                    ${candidate.reason || ""}
+                    ${escapeHTML(
+                        candidate.reason || ""
+                    )}
                 </div>
 
             `;
@@ -505,14 +552,13 @@ function showCandidates(candidates) {
 }
 
 
-
 /* =========================
-   후보 확정
+   기구 확정 후 Supabase 조회
 ========================= */
 
 confirmButton.addEventListener(
     "click",
-    function () {
+    async function () {
 
         if (!selectedEquipment) {
             return;
@@ -523,16 +569,109 @@ confirmButton.addEventListener(
             "none";
 
 
-        confirmSection.style.display =
+        loadingSection.style.display =
             "block";
 
 
-        confirmedEquipment.textContent =
-            "선택한 실험기구: " +
-            selectedEquipment.name;
+        try {
+
+            const response =
+                await fetch(
+
+                    `/api/equipment?name=${encodeURIComponent(
+                        selectedEquipment.name
+                    )}`
+
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    "기구 정보를 불러오지 못했습니다."
+                );
+            }
+
+
+            const equipment =
+                data.equipment;
+
+
+            loadingSection.style.display =
+                "none";
+
+
+            confirmedEquipment.textContent =
+                equipment.name;
+
+
+            detailCategory.textContent =
+                equipment.category || "-";
+
+
+            detailPurpose.textContent =
+                equipment.purpose || "-";
+
+
+            detailStructure.textContent =
+                equipment.structure || "-";
+
+
+            detailUsage.textContent =
+                equipment.usage || "-";
+
+
+            detailCaution.textContent =
+                equipment.caution || "-";
+
+
+            if (equipment.image_url) {
+
+                equipmentImage.src =
+                    equipment.image_url;
+
+
+                equipmentImage.style.display =
+                    "block";
+
+            } else {
+
+                equipmentImage.src = "";
+
+
+                equipmentImage.style.display =
+                    "none";
+            }
+
+
+            confirmSection.style.display =
+                "block";
+
+        }
+
+        catch (error) {
+
+            console.error(error);
+
+
+            loadingSection.style.display =
+                "none";
+
+
+            errorSection.style.display =
+                "block";
+
+
+            errorMessage.textContent =
+                error.message;
+        }
     }
 );
-
 
 
 /* =========================
@@ -545,12 +684,10 @@ retryButton.addEventListener(
 );
 
 
-
 errorRetryButton.addEventListener(
     "click",
     goToUpload
 );
-
 
 
 restartButton.addEventListener(
@@ -564,20 +701,23 @@ restartButton.addEventListener(
 );
 
 
-
 function goToUpload() {
 
     uploadSection.style.display =
         "block";
 
+
     loadingSection.style.display =
         "none";
+
 
     resultSection.style.display =
         "none";
 
+
     confirmSection.style.display =
         "none";
+
 
     errorSection.style.display =
         "none";
@@ -585,5 +725,76 @@ function goToUpload() {
 
     selectedEquipment = null;
 
+
     candidateList.innerHTML = "";
+
+
+    selectedResult.textContent =
+        "선택된 기구가 없습니다.";
+
+
+    confirmButton.disabled =
+        true;
+}
+
+
+/* =========================
+   오류
+========================= */
+
+function showError(message) {
+
+    loadingSection.style.display =
+        "none";
+
+
+    resultSection.style.display =
+        "none";
+
+
+    confirmSection.style.display =
+        "none";
+
+
+    errorSection.style.display =
+        "block";
+
+
+    errorMessage.textContent =
+        message;
+}
+
+
+/* =========================
+   HTML 보호
+========================= */
+
+function escapeHTML(value) {
+
+    return String(value)
+
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 }
