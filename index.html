@@ -2,11 +2,18 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>실험기구 이미지 인식 안내 서비스</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
 
 <body>
@@ -22,10 +29,13 @@
     </header>
 
 
-    <!-- 이미지 업로드 -->
+    <!-- 이미지 업로드 화면 -->
     <section id="uploadSection">
 
-        <div id="dropArea" class="upload-box">
+        <div
+            id="dropArea"
+            class="upload-box"
+        >
 
             <h2>실험기구 이미지 업로드</h2>
 
@@ -41,6 +51,7 @@
 
             <p id="fileName"></p>
 
+
             <div id="previewArea">
 
                 <p id="previewText">
@@ -53,6 +64,7 @@
                 >
 
             </div>
+
 
             <button
                 id="removeButton"
@@ -87,7 +99,7 @@
     </section>
 
 
-    <!-- 분석 중 -->
+    <!-- 공통 로딩 화면 -->
     <section
         id="loadingSection"
         class="card"
@@ -96,10 +108,12 @@
 
         <div class="loader"></div>
 
-        <h2>이미지를 분석하고 있습니다.</h2>
+        <h2 id="loadingTitle">
+            이미지를 분석하고 있습니다.
+        </h2>
 
-        <p>
-            실험기구의 형태와 특징을 확인하고 있습니다.
+        <p id="loadingMessage">
+            실험기구를 확인하고 있습니다.
         </p>
 
     </section>
@@ -115,14 +129,20 @@
         <h2>분석 결과</h2>
 
         <p>
-            이미지와 가장 유사한 실험기구 후보입니다.
+            가능성이 높은 실험기구 후보입니다.
         </p>
 
+
         <div id="candidateList"></div>
+
+
+        <p id="lowConfidenceMessage"></p>
+
 
         <p id="selectedResult">
             선택된 기구가 없습니다.
         </p>
+
 
         <button
             id="confirmButton"
@@ -131,6 +151,7 @@
         >
             이 기구로 선택
         </button>
+
 
         <button
             id="retryButton"
@@ -153,11 +174,13 @@
 
         <h3 id="confirmedEquipment"></h3>
 
+
         <img
             id="equipmentImage"
             alt="실험기구 대표 이미지"
             style="display:none;"
         >
+
 
         <div id="equipmentDetails">
 
@@ -188,6 +211,7 @@
 
         </div>
 
+
         <button
             id="restartButton"
             class="secondary-button"
@@ -198,7 +222,7 @@
     </section>
 
 
-    <!-- 오류 -->
+    <!-- 오류 화면 -->
     <section
         id="errorSection"
         class="error-box"
@@ -219,6 +243,7 @@
     </section>
 
 </main>
+
 
 <script src="script.js"></script>
 

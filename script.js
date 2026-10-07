@@ -48,17 +48,28 @@ const errorSection =
     document.getElementById("errorSection");
 
 
+const loadingTitle =
+    document.getElementById("loadingTitle");
+
+const loadingMessage =
+    document.getElementById("loadingMessage");
+
+
 const candidateList =
     document.getElementById("candidateList");
 
 const selectedResult =
     document.getElementById("selectedResult");
 
+const lowConfidenceMessage =
+    document.getElementById("lowConfidenceMessage");
+
+
 const confirmedEquipment =
     document.getElementById("confirmedEquipment");
 
-const errorMessage =
-    document.getElementById("errorMessage");
+const equipmentImage =
+    document.getElementById("equipmentImage");
 
 
 const detailCategory =
@@ -76,8 +87,9 @@ const detailUsage =
 const detailCaution =
     document.getElementById("detailCaution");
 
-const equipmentImage =
-    document.getElementById("equipmentImage");
+
+const errorMessage =
+    document.getElementById("errorMessage");
 
 
 let currentFile = null;
@@ -85,6 +97,11 @@ let currentFile = null;
 let currentImageURL = null;
 
 let selectedEquipment = null;
+
+/*
+중복 분석 방지
+*/
+let isAnalyzing = false;
 
 
 /* =========================
@@ -100,7 +117,9 @@ function showImage(file) {
 
     if (!file.type.startsWith("image/")) {
 
-        alert("이미지 파일만 업로드할 수 있습니다.");
+        alert(
+            "이미지 파일만 업로드할 수 있습니다."
+        );
 
         return;
     }
@@ -157,6 +176,7 @@ imageInput.addEventListener(
         const file =
             imageInput.files[0];
 
+
         showImage(file);
     }
 );
@@ -171,6 +191,7 @@ dropArea.addEventListener(
     function (event) {
 
         event.preventDefault();
+
 
         dropArea.classList.add(
             "drag-over"
@@ -195,6 +216,7 @@ dropArea.addEventListener(
     function (event) {
 
         event.preventDefault();
+
 
         dropArea.classList.remove(
             "drag-over"
@@ -224,6 +246,7 @@ function resetImage() {
 
     currentFile = null;
 
+
     imageInput.value = "";
 
 
@@ -233,11 +256,13 @@ function resetImage() {
             currentImageURL
         );
 
+
         currentImageURL = null;
     }
 
 
     imagePreview.src = "";
+
 
     imagePreview.style.display =
         "none";
@@ -305,12 +330,53 @@ function fileToBase64(file) {
 
 
 /* =========================
+   로딩 화면
+========================= */
+
+function showAnalysisLoading() {
+
+    loadingTitle.textContent =
+        "이미지를 분석하고 있습니다.";
+
+    loadingMessage.textContent =
+        "실험기구를 확인하고 있습니다.";
+
+
+    loadingSection.style.display =
+        "block";
+}
+
+
+function showDatabaseLoading() {
+
+    loadingTitle.textContent =
+        "기구 정보를 불러오고 있습니다.";
+
+    loadingMessage.textContent =
+        "저장된 실험기구 정보를 확인하고 있습니다.";
+
+
+    loadingSection.style.display =
+        "block";
+}
+
+
+/* =========================
    이미지 분석
+   AI 호출은 여기서 딱 1회
 ========================= */
 
 analyzeButton.addEventListener(
     "click",
     async function () {
+
+        /*
+        중복 요청 차단
+        */
+        if (isAnalyzing) {
+            return;
+        }
+
 
         if (!currentFile) {
 
@@ -320,6 +386,12 @@ analyzeButton.addEventListener(
 
             return;
         }
+
+
+        isAnalyzing = true;
+
+        analyzeButton.disabled =
+            true;
 
 
         uploadSection.style.display =
@@ -334,8 +406,8 @@ analyzeButton.addEventListener(
         errorSection.style.display =
             "none";
 
-        loadingSection.style.display =
-            "block";
+
+        showAnalysisLoading();
 
 
         try {
@@ -346,6 +418,9 @@ analyzeButton.addEventListener(
                 );
 
 
+            /*
+            AI 호출은 오직 여기
+            */
             const response =
                 await fetch(
                     "/api/analyze",
@@ -354,6 +429,7 @@ analyzeButton.addEventListener(
                         method: "POST",
 
                         headers: {
+
                             "Content-Type":
                                 "application/json"
                         },
@@ -361,6 +437,7 @@ analyzeButton.addEventListener(
                         body:
                             JSON.stringify(
                                 {
+
                                     image:
                                         base64Image,
 
@@ -394,7 +471,8 @@ analyzeButton.addEventListener(
 
 
             showCandidates(
-                data.candidates
+                data.candidates,
+                data.lowConfidence
             );
 
         }
@@ -408,22 +486,39 @@ analyzeButton.addEventListener(
                 "none";
 
 
-            errorSection.style.display =
-                "block";
+            showError(
+                error.message
+            );
+
+        }
+
+        finally {
+
+            isAnalyzing = false;
 
 
-            errorMessage.textContent =
-                error.message;
+            /*
+            현재 업로드 이미지가 있다면
+            다시 분석 가능
+            */
+            if (currentFile) {
+
+                analyzeButton.disabled =
+                    false;
+            }
         }
     }
 );
 
 
 /* =========================
-   후보 표시
+   분석 후보 표시
 ========================= */
 
-function showCandidates(candidates) {
+function showCandidates(
+    candidates,
+    lowConfidence
+) {
 
     candidateList.innerHTML = "";
 
@@ -431,11 +526,16 @@ function showCandidates(candidates) {
     selectedEquipment = null;
 
 
-    confirmButton.disabled = true;
+    confirmButton.disabled =
+        true;
 
 
     selectedResult.textContent =
         "선택된 기구가 없습니다.";
+
+
+    lowConfidenceMessage.textContent =
+        "";
 
 
     if (
@@ -444,10 +544,20 @@ function showCandidates(candidates) {
     ) {
 
         showError(
-            "적절한 실험기구 후보를 찾지 못했습니다."
+            "실험기구를 식별하지 못했습니다. 다른 사진으로 다시 시도해 주세요."
         );
 
         return;
+    }
+
+
+    /*
+    50% 미만 후보만 남은 경우
+    */
+    if (lowConfidence) {
+
+        lowConfidenceMessage.textContent =
+            "정확도가 낮은 결과입니다. 사진을 확인한 뒤 후보를 선택해 주세요.";
     }
 
 
@@ -465,18 +575,34 @@ function showCandidates(candidates) {
             );
 
 
-            const confidence =
+            let confidence =
+                Number(
+                    candidate.confidence
+                ) || 0;
+
+
+            confidence =
                 Math.round(
-                    Number(
-                        candidate.confidence
-                    ) || 0
+                    Math.max(
+                        0,
+                        Math.min(
+                            100,
+                            confidence
+                        )
+                    )
                 );
 
 
+            /*
+            판단 근거 삭제
+            이름 + 정확도만 표시
+            */
             item.innerHTML = `
 
                 <div class="candidate-name">
-                    ${escapeHTML(candidate.name)}
+                    ${escapeHTML(
+                        candidate.name
+                    )}
                 </div>
 
                 <div class="confidence">
@@ -491,12 +617,6 @@ function showCandidates(candidates) {
                         style="width:${confidence}%"
                     ></div>
 
-                </div>
-
-                <div class="reason">
-                    ${escapeHTML(
-                        candidate.reason || ""
-                    )}
                 </div>
 
             `;
@@ -553,7 +673,9 @@ function showCandidates(candidates) {
 
 
 /* =========================
-   기구 확정 후 Supabase 조회
+   후보 확정
+   AI 호출 없음
+   Supabase 조회만 실행
 ========================= */
 
 confirmButton.addEventListener(
@@ -569,8 +691,15 @@ confirmButton.addEventListener(
             "none";
 
 
-        loadingSection.style.display =
-            "block";
+        errorSection.style.display =
+            "none";
+
+
+        /*
+        여기서는 이미지 분석이 아니라
+        DB 데이터만 읽음
+        */
+        showDatabaseLoading();
 
 
         try {
@@ -630,6 +759,10 @@ confirmButton.addEventListener(
                 equipment.caution || "-";
 
 
+            /*
+            대표 이미지
+            image_url이 있을 때만 표시
+            */
             if (equipment.image_url) {
 
                 equipmentImage.src =
@@ -639,7 +772,9 @@ confirmButton.addEventListener(
                 equipmentImage.style.display =
                     "block";
 
-            } else {
+            }
+
+            else {
 
                 equipmentImage.src = "";
 
@@ -663,12 +798,9 @@ confirmButton.addEventListener(
                 "none";
 
 
-            errorSection.style.display =
-                "block";
-
-
-            errorMessage.textContent =
-                error.message;
+            showError(
+                error.message
+            );
         }
     }
 );
@@ -680,13 +812,19 @@ confirmButton.addEventListener(
 
 retryButton.addEventListener(
     "click",
-    goToUpload
+    function () {
+
+        goToUpload();
+    }
 );
 
 
 errorRetryButton.addEventListener(
     "click",
-    goToUpload
+    function () {
+
+        goToUpload();
+    }
 );
 
 
@@ -700,6 +838,10 @@ restartButton.addEventListener(
     }
 );
 
+
+/* =========================
+   업로드 화면으로 이동
+========================= */
 
 function goToUpload() {
 
@@ -729,17 +871,35 @@ function goToUpload() {
     candidateList.innerHTML = "";
 
 
+    lowConfidenceMessage.textContent =
+        "";
+
+
     selectedResult.textContent =
         "선택된 기구가 없습니다.";
 
 
     confirmButton.disabled =
         true;
+
+
+    if (currentFile) {
+
+        analyzeButton.disabled =
+            false;
+
+    }
+
+    else {
+
+        analyzeButton.disabled =
+            true;
+    }
 }
 
 
 /* =========================
-   오류
+   오류 표시
 ========================= */
 
 function showError(message) {
@@ -766,7 +926,7 @@ function showError(message) {
 
 
 /* =========================
-   HTML 보호
+   HTML 문자 보호
 ========================= */
 
 function escapeHTML(value) {
