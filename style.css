@@ -497,6 +497,20 @@ button:disabled {
     font-size: 14px;
 }
 
+.credit-list {
+    margin: 0;
+    padding-left: 22px;
+}
+
+.credit-list li {
+    margin-bottom: 13px;
+    line-height: 1.5;
+}
+
+.credit-list a {
+    color: #333333;
+}
+
 
 /* 오류 */
 
@@ -510,6 +524,19 @@ button:disabled {
     padding: 30px;
 
     margin-top: 20px;
+}
+
+.site-footer {
+    width: 90%;
+    max-width: 850px;
+    margin: -30px auto 35px;
+    color: #666666;
+    font-size: 13px;
+    text-align: center;
+}
+
+.site-footer a {
+    color: inherit;
 }
 
 
