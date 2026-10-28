@@ -91,12 +91,64 @@ const detailCaution =
 const errorMessage =
     document.getElementById("errorMessage");
 
+const featureTabs =
+    document.querySelectorAll(".feature-tab");
+
+const featurePanels =
+    document.querySelectorAll("[data-feature]");
+
+const detailFavoriteButton =
+    document.getElementById("detailFavoriteButton");
+
+const dictionarySection =
+    document.getElementById("dictionarySection");
+
+const dictionarySearchForm =
+    document.getElementById("dictionarySearchForm");
+
+const dictionaryName =
+    document.getElementById("dictionaryName");
+
+const dictionaryCategory =
+    document.getElementById("dictionaryCategory");
+
+const dictionaryResetButton =
+    document.getElementById("dictionaryResetButton");
+
+const dictionaryStatus =
+    document.getElementById("dictionaryStatus");
+
+const dictionaryList =
+    document.getElementById("dictionaryList");
+
+const historySection =
+    document.getElementById("historySection");
+
+const historyStatus =
+    document.getElementById("historyStatus");
+
+const historyList =
+    document.getElementById("historyList");
+
+const favoritesSection =
+    document.getElementById("favoritesSection");
+
+const favoritesStatus =
+    document.getElementById("favoritesStatus");
+
+const favoritesList =
+    document.getElementById("favoritesList");
+
 
 let currentFile = null;
 
 let currentImageURL = null;
 
 let selectedEquipment = null;
+
+let displayedEquipment = null;
+
+let favoriteNames = new Set();
 
 /*
 중복 분석 방지
@@ -731,6 +783,19 @@ confirmButton.addEventListener(
                 data.equipment;
 
 
+            await saveAnalysisHistory(
+                {
+                    name: equipment.name,
+                    confidence:
+                        selectedEquipment.confidence
+                }
+            );
+
+
+            displayedEquipment =
+                equipment;
+
+
             loadingSection.style.display =
                 "none";
 
@@ -782,6 +847,11 @@ confirmButton.addEventListener(
                 equipmentImage.style.display =
                     "none";
             }
+
+
+            await refreshFavoriteNames();
+
+            updateDetailFavoriteButton();
 
 
             confirmSection.style.display =
@@ -895,6 +965,541 @@ function goToUpload() {
         analyzeButton.disabled =
             true;
     }
+}
+
+
+/* =========================
+   기능 메뉴
+========================= */
+
+featureTabs.forEach(
+    function (tab) {
+
+        tab.addEventListener(
+            "click",
+            function () {
+
+                openFeature(
+                    tab.dataset.target
+                );
+            }
+        );
+    }
+);
+
+
+async function openFeature(feature) {
+
+    featurePanels.forEach(
+        function (panel) {
+            panel.style.display = "none";
+        }
+    );
+
+    featureTabs.forEach(
+        function (tab) {
+            tab.classList.toggle(
+                "active",
+                tab.dataset.target === feature
+            );
+        }
+    );
+
+    if (feature === "analysis") {
+        goToUpload();
+        return;
+    }
+
+    if (feature === "dictionary") {
+        dictionarySection.style.display = "block";
+        await loadDictionary();
+        return;
+    }
+
+    if (feature === "history") {
+        historySection.style.display = "block";
+        await loadHistory();
+        return;
+    }
+
+    favoritesSection.style.display = "block";
+    await loadFavorites();
+}
+
+
+/* =========================
+   공통 API 처리
+========================= */
+
+async function requestJSON(url, options) {
+
+    const response = await fetch(
+        url,
+        options
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(
+            data.error ||
+            "요청을 처리하지 못했습니다."
+        );
+    }
+
+    return data;
+}
+
+
+function formatDate(value) {
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "-";
+    }
+
+    return date.toLocaleString("ko-KR");
+}
+
+
+/* =========================
+   최근 분석 기록
+========================= */
+
+async function saveAnalysisHistory(candidate) {
+
+    await requestJSON(
+        "/api/history",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                equipment_name: candidate.name,
+                confidence: candidate.confidence
+            })
+        }
+    );
+}
+
+
+async function loadHistory() {
+
+    historyStatus.textContent =
+        "기록을 불러오고 있습니다.";
+
+    historyList.replaceChildren();
+
+    try {
+
+        const data = await requestJSON(
+            "/api/history?limit=50"
+        );
+
+        const history = data.history || [];
+
+        historyStatus.textContent = history.length
+            ? `최근 기록 ${history.length}개`
+            : "아직 저장된 분석 기록이 없습니다.";
+
+        history.forEach(
+            function (item) {
+
+                const card =
+                    document.createElement("article");
+
+                card.className = "record-card";
+
+                const info =
+                    document.createElement("div");
+
+                const title =
+                    document.createElement("h3");
+
+                title.textContent =
+                    item.equipment_name;
+
+                const confidence =
+                    document.createElement("p");
+
+                confidence.textContent =
+                    `신뢰도 ${Math.round(Number(item.confidence) || 0)}%`;
+
+                info.append(title, confidence);
+
+                const date =
+                    document.createElement("div");
+
+                date.className = "record-meta";
+                date.textContent =
+                    formatDate(item.created_at);
+
+                card.append(info, date);
+                historyList.appendChild(card);
+            }
+        );
+
+    } catch (error) {
+
+        historyStatus.textContent = error.message;
+    }
+}
+
+
+/* =========================
+   즐겨찾기
+========================= */
+
+async function refreshFavoriteNames() {
+
+    const data = await requestJSON(
+        "/api/favorites"
+    );
+
+    favoriteNames = new Set(
+        (data.favorites || []).map(
+            item => item.equipment_name
+        )
+    );
+
+    return data.favorites || [];
+}
+
+
+async function toggleFavorite(name) {
+
+    if (favoriteNames.has(name)) {
+
+        await requestJSON(
+            `/api/favorites?equipment_name=${encodeURIComponent(name)}`,
+            { method: "DELETE" }
+        );
+
+        favoriteNames.delete(name);
+
+    } else {
+
+        await requestJSON(
+            "/api/favorites",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    equipment_name: name
+                })
+            }
+        );
+
+        favoriteNames.add(name);
+    }
+}
+
+
+function updateDetailFavoriteButton() {
+
+    if (!displayedEquipment) {
+        return;
+    }
+
+    detailFavoriteButton.textContent =
+        favoriteNames.has(displayedEquipment.name)
+            ? "즐겨찾기 삭제"
+            : "즐겨찾기 추가";
+}
+
+
+detailFavoriteButton.addEventListener(
+    "click",
+    async function () {
+
+        if (!displayedEquipment) {
+            return;
+        }
+
+        detailFavoriteButton.disabled = true;
+
+        try {
+            await toggleFavorite(
+                displayedEquipment.name
+            );
+
+            updateDetailFavoriteButton();
+
+        } catch (error) {
+            alert(error.message);
+
+        } finally {
+            detailFavoriteButton.disabled = false;
+        }
+    }
+);
+
+
+async function loadFavorites() {
+
+    favoritesStatus.textContent =
+        "즐겨찾기를 불러오고 있습니다.";
+
+    favoritesList.replaceChildren();
+
+    try {
+
+        const favorites =
+            await refreshFavoriteNames();
+
+        favoritesStatus.textContent = favorites.length
+            ? `즐겨찾기 ${favorites.length}개`
+            : "아직 등록된 즐겨찾기가 없습니다.";
+
+        favorites.forEach(
+            function (item) {
+
+                const card =
+                    document.createElement("article");
+
+                card.className = "record-card";
+
+                const info =
+                    document.createElement("div");
+
+                const title =
+                    document.createElement("h3");
+
+                title.textContent =
+                    item.equipment_name;
+
+                const date =
+                    document.createElement("p");
+
+                date.textContent =
+                    `추가일 ${formatDate(item.created_at)}`;
+
+                info.append(title, date);
+
+                const remove =
+                    document.createElement("button");
+
+                remove.type = "button";
+                remove.className =
+                    "secondary-button compact-button";
+                remove.textContent = "삭제";
+
+                remove.addEventListener(
+                    "click",
+                    async function () {
+
+                        remove.disabled = true;
+
+                        try {
+                            await toggleFavorite(
+                                item.equipment_name
+                            );
+                            await loadFavorites();
+                        } catch (error) {
+                            favoritesStatus.textContent =
+                                error.message;
+                            remove.disabled = false;
+                        }
+                    }
+                );
+
+                card.append(info, remove);
+                favoritesList.appendChild(card);
+            }
+        );
+
+    } catch (error) {
+
+        favoritesStatus.textContent = error.message;
+    }
+}
+
+
+/* =========================
+   실험기구 사전
+========================= */
+
+dictionarySearchForm.addEventListener(
+    "submit",
+    function (event) {
+        event.preventDefault();
+        loadDictionary();
+    }
+);
+
+
+dictionaryResetButton.addEventListener(
+    "click",
+    function () {
+        dictionaryName.value = "";
+        dictionaryCategory.value = "";
+        loadDictionary();
+    }
+);
+
+
+async function loadDictionary() {
+
+    dictionaryStatus.textContent =
+        "기구 목록을 불러오고 있습니다.";
+
+    dictionaryList.replaceChildren();
+
+    try {
+
+        const params = new URLSearchParams();
+
+        if (dictionaryName.value.trim()) {
+            params.set(
+                "name",
+                dictionaryName.value.trim()
+            );
+        }
+
+        if (dictionaryCategory.value) {
+            params.set(
+                "category",
+                dictionaryCategory.value
+            );
+        }
+
+        const query = params.toString();
+
+        const [data] = await Promise.all([
+            requestJSON(
+                `/api/equipment-list${query ? `?${query}` : ""}`
+            ),
+            refreshFavoriteNames()
+        ]);
+
+        const equipment = data.equipment || [];
+
+        populateCategoryOptions(equipment);
+
+        dictionaryStatus.textContent = equipment.length
+            ? `실험기구 ${equipment.length}개`
+            : "검색 결과가 없습니다.";
+
+        equipment.forEach(renderEquipmentCard);
+
+    } catch (error) {
+
+        dictionaryStatus.textContent = error.message;
+    }
+}
+
+
+function populateCategoryOptions(equipment) {
+
+    if (dictionaryCategory.options.length > 1) {
+        return;
+    }
+
+    const categories = Array.from(
+        new Set(
+            equipment
+                .map(item => item.category)
+                .filter(Boolean)
+        )
+    ).sort();
+
+    categories.forEach(
+        function (category) {
+
+            const option =
+                document.createElement("option");
+
+            option.value = category;
+            option.textContent = category;
+            dictionaryCategory.appendChild(option);
+        }
+    );
+}
+
+
+function renderEquipmentCard(equipment) {
+
+    const card =
+        document.createElement("article");
+
+    card.className = "equipment-card";
+
+    const header =
+        document.createElement("div");
+
+    header.className = "equipment-card-header";
+
+    const info =
+        document.createElement("div");
+
+    const title =
+        document.createElement("h3");
+
+    title.textContent = equipment.name;
+
+    const category =
+        document.createElement("p");
+
+    category.textContent =
+        equipment.category || "분류 없음";
+
+    info.append(title, category);
+
+    const favorite =
+        document.createElement("button");
+
+    favorite.type = "button";
+    favorite.className =
+        "secondary-button compact-button";
+    favorite.textContent = favoriteNames.has(equipment.name)
+        ? "즐겨찾기 삭제"
+        : "즐겨찾기 추가";
+
+    favorite.addEventListener(
+        "click",
+        async function () {
+
+            favorite.disabled = true;
+
+            try {
+                await toggleFavorite(equipment.name);
+                favorite.textContent = favoriteNames.has(equipment.name)
+                    ? "즐겨찾기 삭제"
+                    : "즐겨찾기 추가";
+            } catch (error) {
+                dictionaryStatus.textContent = error.message;
+            } finally {
+                favorite.disabled = false;
+            }
+        }
+    );
+
+    header.append(info, favorite);
+    card.appendChild(header);
+
+    if (equipment.image_url) {
+
+        const image =
+            document.createElement("img");
+
+        image.src = equipment.image_url;
+        image.alt = `${equipment.name} 대표 이미지`;
+        image.loading = "lazy";
+        card.appendChild(image);
+    }
+
+    const purpose =
+        document.createElement("p");
+
+    purpose.textContent =
+        equipment.purpose || "용도 정보가 없습니다.";
+
+    card.appendChild(purpose);
+    dictionaryList.appendChild(card);
 }
 
 

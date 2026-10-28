@@ -41,6 +41,25 @@ h1 {
     color: #555555;
 }
 
+.feature-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 22px;
+}
+
+.feature-tab {
+    margin: 0;
+    padding: 12px 10px;
+    background: #e5e7eb;
+    color: #333333;
+}
+
+.feature-tab.active {
+    background: #222222;
+    color: white;
+}
+
 
 .card {
     background-color: white;
@@ -372,6 +391,113 @@ button:disabled {
 }
 
 
+/* 사전, 최근 기록, 즐겨찾기 */
+
+.feature-section {
+    text-align: left;
+}
+
+.feature-section > h2,
+.feature-section > .section-description,
+.feature-section > .section-status {
+    text-align: center;
+}
+
+.dictionary-search {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr auto auto;
+    gap: 10px;
+    align-items: end;
+    margin: 25px 0 18px;
+}
+
+.dictionary-search label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.dictionary-search input,
+.dictionary-search select {
+    width: 100%;
+    min-height: 43px;
+    padding: 10px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    background: white;
+    font-size: 15px;
+}
+
+.dictionary-search button {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.section-status {
+    min-height: 24px;
+    color: #666666;
+}
+
+.equipment-grid,
+.record-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.equipment-card,
+.record-card {
+    padding: 18px;
+    border: 1px solid #dddddd;
+    border-radius: 10px;
+    background: #fafafa;
+}
+
+.equipment-card-header,
+.record-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.equipment-card h3,
+.record-card h3 {
+    margin: 0;
+}
+
+.equipment-card p,
+.record-card p {
+    margin: 7px 0 0;
+    color: #555555;
+    line-height: 1.5;
+}
+
+.equipment-card img {
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    margin: 14px 0;
+    border-radius: 8px;
+    background: white;
+}
+
+.compact-button {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 9px 13px;
+    font-size: 14px;
+}
+
+.record-meta {
+    text-align: right;
+    color: #666666;
+    font-size: 14px;
+}
+
+
 /* 오류 */
 
 .error-box {
@@ -406,6 +532,24 @@ button:disabled {
 
     #previewArea {
         min-height: 220px;
+    }
+
+    .feature-nav {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dictionary-search {
+        grid-template-columns: 1fr;
+    }
+
+    .equipment-card-header,
+    .record-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .record-meta {
+        text-align: left;
     }
 
 }

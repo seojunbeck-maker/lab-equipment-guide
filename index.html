@@ -28,9 +28,16 @@
         </p>
     </header>
 
+    <nav class="feature-nav" aria-label="주요 기능">
+        <button class="feature-tab active" data-target="analysis" type="button">이미지 찾기</button>
+        <button class="feature-tab" data-target="dictionary" type="button">실험기구 사전</button>
+        <button class="feature-tab" data-target="history" type="button">최근 기록</button>
+        <button class="feature-tab" data-target="favorites" type="button">즐겨찾기</button>
+    </nav>
+
 
     <!-- 이미지 업로드 화면 -->
-    <section id="uploadSection">
+    <section id="uploadSection" data-feature="analysis">
 
         <div
             id="dropArea"
@@ -103,6 +110,7 @@
     <section
         id="loadingSection"
         class="card"
+        data-feature="analysis"
         style="display:none;"
     >
 
@@ -123,6 +131,7 @@
     <section
         id="resultSection"
         class="card"
+        data-feature="analysis"
         style="display:none;"
     >
 
@@ -167,6 +176,7 @@
     <section
         id="confirmSection"
         class="card"
+        data-feature="analysis"
         style="display:none;"
     >
 
@@ -211,6 +221,14 @@
 
         </div>
 
+        <button
+            id="detailFavoriteButton"
+            class="primary-button"
+            type="button"
+        >
+            즐겨찾기 추가
+        </button>
+
 
         <button
             id="restartButton"
@@ -226,6 +244,7 @@
     <section
         id="errorSection"
         class="error-box"
+        data-feature="analysis"
         style="display:none;"
     >
 
@@ -240,6 +259,65 @@
             다시 시도
         </button>
 
+    </section>
+
+
+    <!-- 실험기구 사전 -->
+    <section
+        id="dictionarySection"
+        class="card feature-section"
+        data-feature="dictionary"
+        style="display:none;"
+    >
+        <h2>실험기구 사전</h2>
+
+        <form id="dictionarySearchForm" class="dictionary-search">
+            <label>
+                <span>이름 검색</span>
+                <input id="dictionaryName" type="search" placeholder="예: 비커">
+            </label>
+
+            <label>
+                <span>분류</span>
+                <select id="dictionaryCategory">
+                    <option value="">전체 분류</option>
+                </select>
+            </label>
+
+            <button class="primary-button" type="submit">검색</button>
+            <button id="dictionaryResetButton" class="secondary-button" type="button">초기화</button>
+        </form>
+
+        <p id="dictionaryStatus" class="section-status"></p>
+        <div id="dictionaryList" class="equipment-grid"></div>
+    </section>
+
+
+    <!-- 최근 분석 기록 -->
+    <section
+        id="historySection"
+        class="card feature-section"
+        data-feature="history"
+        style="display:none;"
+    >
+        <h2>최근 분석 기록</h2>
+        <p class="section-description">최종 후보로 선택한 기구가 최신순으로 저장됩니다.</p>
+        <p id="historyStatus" class="section-status"></p>
+        <div id="historyList" class="record-list"></div>
+    </section>
+
+
+    <!-- 즐겨찾기 -->
+    <section
+        id="favoritesSection"
+        class="card feature-section"
+        data-feature="favorites"
+        style="display:none;"
+    >
+        <h2>즐겨찾기</h2>
+        <p class="section-description">자주 확인하는 실험기구를 모아볼 수 있습니다.</p>
+        <p id="favoritesStatus" class="section-status"></p>
+        <div id="favoritesList" class="record-list"></div>
     </section>
 
 </main>
