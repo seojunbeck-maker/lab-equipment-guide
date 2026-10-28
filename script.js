@@ -150,6 +150,8 @@ let displayedEquipment = null;
 
 let favoriteNames = new Set();
 
+let dictionaryRequestId = 0;
+
 /*
 중복 분석 방지
 */
@@ -1344,6 +1346,9 @@ dictionaryResetButton.addEventListener(
 
 async function loadDictionary() {
 
+    const requestId =
+        ++dictionaryRequestId;
+
     dictionaryStatus.textContent =
         "기구 목록을 불러오고 있습니다.";
 
@@ -1376,6 +1381,10 @@ async function loadDictionary() {
             refreshFavoriteNames()
         ]);
 
+        if (requestId !== dictionaryRequestId) {
+            return;
+        }
+
         const equipment = data.equipment || [];
 
         populateCategoryOptions(equipment);
@@ -1388,7 +1397,9 @@ async function loadDictionary() {
 
     } catch (error) {
 
-        dictionaryStatus.textContent = error.message;
+        if (requestId === dictionaryRequestId) {
+            dictionaryStatus.textContent = error.message;
+        }
     }
 }
 
