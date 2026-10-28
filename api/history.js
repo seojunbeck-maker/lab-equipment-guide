@@ -49,11 +49,11 @@ export default async function handler(req, res) {
                 equipmentName.length > 100 ||
                 !Number.isFinite(confidence) ||
                 confidence < 0 ||
-                confidence > 1
+                confidence > 100
             ) {
                 return res.status(400).json({
                     error:
-                        "equipment_name과 0부터 1 사이의 confidence가 필요합니다."
+                        "equipment_name과 0부터 100 사이의 confidence가 필요합니다."
                 });
             }
 
