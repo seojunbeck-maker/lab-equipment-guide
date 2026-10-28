@@ -1079,6 +1079,7 @@ async function saveAnalysisHistory(candidate) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
+                record_type: "analysis",
                 equipment_name: candidate.name,
                 confidence: candidate.confidence
             })
@@ -1104,7 +1105,7 @@ async function loadHistory() {
 
         historyStatus.textContent = history.length
             ? `최근 기록 ${history.length}개`
-            : "아직 저장된 분석 기록이 없습니다.";
+            : "아직 저장된 기록이 없습니다.";
 
         history.forEach(
             function (item) {
@@ -1120,14 +1121,19 @@ async function loadHistory() {
                 const title =
                     document.createElement("h3");
 
-                title.textContent =
-                    item.equipment_name;
+                const isSearch =
+                    item.record_type === "search";
+
+                title.textContent = isSearch
+                    ? item.search_query
+                    : item.equipment_name;
 
                 const confidence =
                     document.createElement("p");
 
-                confidence.textContent =
-                    `신뢰도 ${Math.round(Number(item.confidence) || 0)}%`;
+                confidence.textContent = isSearch
+                    ? "사전 검색"
+                    : `이미지 분석 · 신뢰도 ${Math.round(Number(item.confidence) || 0)}%`;
 
                 info.append(title, confidence);
 
@@ -1329,7 +1335,7 @@ dictionarySearchForm.addEventListener(
     "submit",
     function (event) {
         event.preventDefault();
-        loadDictionary();
+        loadDictionary(true);
     }
 );
 
@@ -1344,7 +1350,7 @@ dictionaryResetButton.addEventListener(
 );
 
 
-async function loadDictionary() {
+async function loadDictionary(recordSearch = false) {
 
     const requestId =
         ++dictionaryRequestId;
@@ -1358,17 +1364,23 @@ async function loadDictionary() {
 
         const params = new URLSearchParams();
 
-        if (dictionaryName.value.trim()) {
+        const nameValue =
+            dictionaryName.value.trim();
+
+        const categoryValue =
+            dictionaryCategory.value;
+
+        if (nameValue) {
             params.set(
                 "name",
-                dictionaryName.value.trim()
+                nameValue
             );
         }
 
-        if (dictionaryCategory.value) {
+        if (categoryValue) {
             params.set(
                 "category",
-                dictionaryCategory.value
+                categoryValue
             );
         }
 
@@ -1395,12 +1407,61 @@ async function loadDictionary() {
 
         equipment.forEach(renderEquipmentCard);
 
+        if (recordSearch && (nameValue || categoryValue)) {
+            try {
+                await saveDictionarySearch(
+                    nameValue,
+                    categoryValue
+                );
+            } catch (error) {
+                console.error(
+                    "Dictionary history save failed:",
+                    error
+                );
+            }
+        }
+
     } catch (error) {
 
         if (requestId === dictionaryRequestId) {
             dictionaryStatus.textContent = error.message;
         }
     }
+}
+
+
+async function saveDictionarySearch(
+    nameValue,
+    categoryValue
+) {
+
+    const parts = [];
+
+    if (nameValue) {
+        parts.push(`이름: ${nameValue}`);
+    }
+
+    if (categoryValue) {
+        parts.push(`분류: ${categoryValue}`);
+    }
+
+    if (parts.length === 0) {
+        return;
+    }
+
+    await requestJSON(
+        "/api/history",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                record_type: "search",
+                search_query: parts.join(" · ")
+            })
+        }
+    );
 }
 
 
@@ -1510,6 +1571,42 @@ function renderEquipmentCard(equipment) {
         equipment.purpose || "용도 정보가 없습니다.";
 
     card.appendChild(purpose);
+
+    const details =
+        document.createElement("details");
+
+    details.className = "equipment-extra";
+
+    const summary =
+        document.createElement("summary");
+
+    summary.textContent =
+        "자세한 설명과 사용 방법";
+
+    details.appendChild(summary);
+
+    [
+        ["구조", equipment.structure],
+        ["사용 방법", equipment.usage],
+        ["주의사항", equipment.caution]
+    ].forEach(
+        function ([label, value]) {
+
+            const heading =
+                document.createElement("h4");
+
+            heading.textContent = label;
+
+            const text =
+                document.createElement("p");
+
+            text.textContent = value || "등록된 정보가 없습니다.";
+
+            details.append(heading, text);
+        }
+    );
+
+    card.appendChild(details);
     dictionaryList.appendChild(card);
 }
 

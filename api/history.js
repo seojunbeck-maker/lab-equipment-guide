@@ -14,7 +14,8 @@ export default async function handler(req, res) {
                 : 50;
 
             const params = new URLSearchParams({
-                select: "id,equipment_name,confidence,created_at",
+                select:
+                    "id,record_type,search_query,equipment_name,confidence,created_at",
                 order: "created_at.desc",
                 limit: String(limit)
             });
@@ -38,33 +39,63 @@ export default async function handler(req, res) {
 
         if (req.method === "POST") {
             const body = parseRequestBody(req);
+            const recordType =
+                body?.record_type === "search"
+                    ? "search"
+                    : "analysis";
             const equipmentName =
                 typeof body?.equipment_name === "string"
                     ? body.equipment_name.trim()
                     : "";
             const confidence = Number(body?.confidence);
+            const searchQuery =
+                typeof body?.search_query === "string"
+                    ? body.search_query.trim()
+                    : "";
 
-            if (
-                !equipmentName ||
-                equipmentName.length > 100 ||
-                !Number.isFinite(confidence) ||
-                confidence < 0 ||
-                confidence > 100
-            ) {
-                return res.status(400).json({
-                    error:
-                        "equipment_name과 0부터 100 사이의 confidence가 필요합니다."
-                });
+            let insertBody;
+
+            if (recordType === "search") {
+                if (!searchQuery || searchQuery.length > 200) {
+                    return res.status(400).json({
+                        error: "검색 기록에는 200자 이하의 search_query가 필요합니다."
+                    });
+                }
+
+                insertBody = {
+                    record_type: "search",
+                    search_query: searchQuery,
+                    equipment_name: null,
+                    confidence: null
+                };
+
+            } else {
+                if (
+                    !equipmentName ||
+                    equipmentName.length > 100 ||
+                    !Number.isFinite(confidence) ||
+                    confidence < 0 ||
+                    confidence > 100
+                ) {
+                    return res.status(400).json({
+                        error:
+                            "분석 기록에는 equipment_name과 0부터 100 사이의 confidence가 필요합니다."
+                    });
+                }
+
+                insertBody = {
+                    record_type: "analysis",
+                    search_query: null,
+                    equipment_name: equipmentName,
+                    confidence
+                };
             }
 
             const { response, data } = await supabaseRequest(
                 "analysis_history",
                 {
                     method: "POST",
-                    body: {
-                        equipment_name: equipmentName,
-                        confidence
-                    },
+                    body: insertBody,
                     prefer: "return=representation"
                 }
             );

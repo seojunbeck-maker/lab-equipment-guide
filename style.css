@@ -484,6 +484,26 @@ button:disabled {
     background: white;
 }
 
+.equipment-extra {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #dddddd;
+}
+
+.equipment-extra summary {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.equipment-extra h4 {
+    margin: 16px 0 5px;
+}
+
+.equipment-extra p {
+    margin: 0;
+    white-space: pre-line;
+}
+
 .compact-button {
     flex: 0 0 auto;
     margin: 0;
