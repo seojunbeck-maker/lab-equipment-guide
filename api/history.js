@@ -28,7 +28,7 @@ export default async function handler(req, res) {
             if (!response.ok) {
                 console.error("History read failed:", response.status, data);
                 return res.status(500).json({
-                    error: "분석 기록을 불러오지 못했습니다."
+                    error: "최근 기록을 불러오지 못했습니다."
                 });
             }
 
@@ -103,7 +103,7 @@ export default async function handler(req, res) {
             if (!response.ok) {
                 console.error("History insert failed:", response.status, data);
                 return res.status(500).json({
-                    error: "분석 기록을 저장하지 못했습니다."
+                    error: "최근 기록을 저장하지 못했습니다."
                 });
             }
 
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     } catch (error) {
         console.error("History API error:", error);
         return res.status(500).json({
-            error: "분석 기록 처리 중 오류가 발생했습니다."
+            error: "최근 기록 처리 중 오류가 발생했습니다."
         });
     }
 }
