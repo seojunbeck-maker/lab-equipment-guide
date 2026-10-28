@@ -112,9 +112,48 @@ export default async function handler(req, res) {
             });
         }
 
-        res.setHeader("Allow", "GET, POST");
+        if (req.method === "DELETE") {
+            const id = Number(req.query.id);
+
+            if (!Number.isInteger(id) || id <= 0) {
+                return res.status(400).json({
+                    error: "삭제할 기록의 id가 필요합니다."
+                });
+            }
+
+            const params = new URLSearchParams({
+                id: `eq.${id}`
+            });
+            const { response, data } = await supabaseRequest(
+                "analysis_history",
+                {
+                    method: "DELETE",
+                    params,
+                    prefer: "return=representation"
+                }
+            );
+
+            if (!response.ok) {
+                console.error("History delete failed:", response.status, data);
+                return res.status(500).json({
+                    error: "최근 기록을 삭제하지 못했습니다."
+                });
+            }
+
+            if (!Array.isArray(data) || data.length === 0) {
+                return res.status(404).json({
+                    error: "삭제할 최근 기록을 찾지 못했습니다."
+                });
+            }
+
+            return res.status(200).json({
+                deleted: data[0]
+            });
+        }
+
+        res.setHeader("Allow", "GET, POST, DELETE");
         return res.status(405).json({
-            error: "GET 또는 POST 요청만 사용할 수 있습니다."
+            error: "GET, POST 또는 DELETE 요청만 사용할 수 있습니다."
         });
     } catch (error) {
         console.error("History API error:", error);

@@ -145,6 +145,51 @@ const favoritesList =
 const favoritesInitialNav =
     document.getElementById("favoritesInitialNav");
 
+const equipmentSubmissionForm =
+    document.getElementById("equipmentSubmissionForm");
+
+const equipmentSubmissionButton =
+    document.getElementById("equipmentSubmissionButton");
+
+const equipmentSubmissionStatus =
+    document.getElementById("equipmentSubmissionStatus");
+
+const adminDialog =
+    document.getElementById("adminDialog");
+
+const adminEntryButton =
+    document.getElementById("adminEntryButton");
+
+const adminCloseButton =
+    document.getElementById("adminCloseButton");
+
+const adminLoginPanel =
+    document.getElementById("adminLoginPanel");
+
+const adminReviewPanel =
+    document.getElementById("adminReviewPanel");
+
+const adminLoginForm =
+    document.getElementById("adminLoginForm");
+
+const adminPassword =
+    document.getElementById("adminPassword");
+
+const adminLoginButton =
+    document.getElementById("adminLoginButton");
+
+const adminLoginStatus =
+    document.getElementById("adminLoginStatus");
+
+const adminReviewStatus =
+    document.getElementById("adminReviewStatus");
+
+const adminSubmissionList =
+    document.getElementById("adminSubmissionList");
+
+const adminLogoutButton =
+    document.getElementById("adminLogoutButton");
+
 
 const HANGUL_INITIALS = [
     "ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ",
@@ -1174,7 +1219,45 @@ async function loadHistory() {
                 date.textContent =
                     formatDate(item.created_at);
 
-                card.append(info, date);
+                const actions =
+                    document.createElement("div");
+
+                actions.className = "record-actions";
+
+                const remove =
+                    document.createElement("button");
+
+                remove.type = "button";
+                remove.className =
+                    "secondary-button compact-button";
+                remove.textContent = "삭제";
+
+                remove.addEventListener(
+                    "click",
+                    async function () {
+
+                        if (!window.confirm("이 기록을 삭제할까요?")) {
+                            return;
+                        }
+
+                        remove.disabled = true;
+
+                        try {
+                            await requestJSON(
+                                `/api/history?id=${encodeURIComponent(item.id)}`,
+                                { method: "DELETE" }
+                            );
+                            await loadHistory();
+
+                        } catch (error) {
+                            historyStatus.textContent = error.message;
+                            remove.disabled = false;
+                        }
+                    }
+                );
+
+                actions.append(date, remove);
+                card.append(info, actions);
                 historyList.appendChild(card);
             }
         );
@@ -1384,6 +1467,403 @@ async function loadFavorites() {
 
         favoritesStatus.textContent = error.message;
     }
+}
+
+
+/* =========================
+   사전 등록 제안
+========================= */
+
+equipmentSubmissionForm.addEventListener(
+    "submit",
+    async function (event) {
+        event.preventDefault();
+
+        equipmentSubmissionButton.disabled = true;
+        equipmentSubmissionStatus.textContent =
+            "제안을 전송하고 있습니다.";
+
+        const formData = new FormData(
+            equipmentSubmissionForm
+        );
+        const payload = Object.fromEntries(
+            formData.entries()
+        );
+
+        try {
+            await requestJSON(
+                "/api/equipment-submissions",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                }
+            );
+
+            equipmentSubmissionForm.reset();
+            equipmentSubmissionStatus.textContent =
+                "제안이 접수되었습니다. 관리자 검토 후 사전에 반영됩니다.";
+
+        } catch (error) {
+            equipmentSubmissionStatus.textContent = error.message;
+
+        } finally {
+            equipmentSubmissionButton.disabled = false;
+        }
+    }
+);
+
+
+/* =========================
+   관리자 검토실
+========================= */
+
+function setAdminView(authenticated) {
+    adminLoginPanel.hidden = authenticated;
+    adminReviewPanel.hidden = !authenticated;
+
+    if (!authenticated) {
+        adminSubmissionList.replaceChildren();
+        adminReviewStatus.textContent = "";
+    }
+}
+
+
+async function checkAdminSession() {
+    adminLoginStatus.textContent = "";
+
+    try {
+        const data = await requestJSON(
+            "/api/admin-session"
+        );
+        const authenticated = Boolean(
+            data.authenticated
+        );
+
+        setAdminView(authenticated);
+
+        if (authenticated) {
+            await loadAdminSubmissions();
+        } else {
+            adminPassword.focus();
+        }
+
+    } catch (error) {
+        setAdminView(false);
+        adminLoginStatus.textContent = error.message;
+    }
+}
+
+
+async function openAdminDialog() {
+    if (!adminDialog.open) {
+        adminDialog.showModal();
+    }
+
+    if (window.location.hash !== "#admin") {
+        window.history.replaceState(null, "", "#admin");
+    }
+
+    await checkAdminSession();
+}
+
+
+function closeAdminDialog() {
+    if (adminDialog.open) {
+        adminDialog.close();
+    }
+}
+
+
+adminEntryButton.addEventListener(
+    "click",
+    openAdminDialog
+);
+
+
+adminCloseButton.addEventListener(
+    "click",
+    closeAdminDialog
+);
+
+
+adminDialog.addEventListener(
+    "close",
+    function () {
+        adminPassword.value = "";
+
+        if (window.location.hash === "#admin") {
+            window.history.replaceState(
+                null,
+                "",
+                `${window.location.pathname}${window.location.search}`
+            );
+        }
+    }
+);
+
+
+adminLoginForm.addEventListener(
+    "submit",
+    async function (event) {
+        event.preventDefault();
+
+        adminLoginButton.disabled = true;
+        adminLoginStatus.textContent = "확인하고 있습니다.";
+
+        try {
+            await requestJSON(
+                "/api/admin-session",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        password: adminPassword.value
+                    })
+                }
+            );
+
+            adminPassword.value = "";
+            adminLoginStatus.textContent = "";
+            setAdminView(true);
+            await loadAdminSubmissions();
+
+        } catch (error) {
+            adminLoginStatus.textContent = error.message;
+
+        } finally {
+            adminLoginButton.disabled = false;
+        }
+    }
+);
+
+
+adminLogoutButton.addEventListener(
+    "click",
+    async function () {
+        adminLogoutButton.disabled = true;
+
+        try {
+            await requestJSON(
+                "/api/admin-session",
+                { method: "DELETE" }
+            );
+            setAdminView(false);
+            adminLoginStatus.textContent =
+                "관리자 세션에서 나왔습니다.";
+            adminPassword.focus();
+
+        } catch (error) {
+            adminReviewStatus.textContent = error.message;
+
+        } finally {
+            adminLogoutButton.disabled = false;
+        }
+    }
+);
+
+
+async function reviewSubmission(
+    submission,
+    action,
+    imageUrl,
+    reviewerNote
+) {
+    const verb = action === "approve" ? "승인" : "반려";
+
+    if (
+        action === "approve" &&
+        !String(imageUrl || "").trim()
+    ) {
+        throw new Error(
+            "승인하려면 사전에 표시할 사진 주소가 필요합니다."
+        );
+    }
+
+    if (!window.confirm(`${submission.name} 제안을 ${verb}할까요?`)) {
+        return false;
+    }
+
+    await requestJSON(
+        "/api/admin-submissions",
+        {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                id: submission.id,
+                action,
+                image_url: String(imageUrl || "").trim(),
+                reviewer_note: String(reviewerNote || "").trim()
+            })
+        }
+    );
+
+    return true;
+}
+
+
+function renderAdminSubmission(submission) {
+    const card = document.createElement("article");
+    card.className = "admin-submission-card";
+
+    const title = document.createElement("h3");
+    title.textContent = submission.name;
+
+    const meta = document.createElement("p");
+    meta.className = "admin-submission-meta";
+    meta.textContent =
+        `${submission.category} · 제안일 ${formatDate(submission.created_at)}`;
+
+    card.append(title, meta);
+
+    if (submission.image_url) {
+        const image = document.createElement("img");
+        image.src = submission.image_url;
+        image.alt = `${submission.name} 제안 이미지`;
+        image.loading = "lazy";
+        card.appendChild(image);
+    }
+
+    const details = document.createElement("dl");
+
+    [
+        ["용도", submission.purpose],
+        ["구조", submission.structure],
+        ["사용법", submission.usage],
+        ["주의", submission.caution]
+    ].forEach(
+        function ([label, value]) {
+            const term = document.createElement("dt");
+            term.textContent = label;
+
+            const description = document.createElement("dd");
+            description.textContent = value;
+
+            details.append(term, description);
+        }
+    );
+
+    card.appendChild(details);
+
+    const imageLabel = document.createElement("label");
+    imageLabel.className = "admin-review-field";
+    imageLabel.textContent = "승인용 사진 주소";
+
+    const imageInput = document.createElement("input");
+    imageInput.type = "url";
+    imageInput.maxLength = 1000;
+    imageInput.placeholder = "https://...";
+    imageInput.value = submission.image_url || "";
+    imageLabel.appendChild(imageInput);
+
+    const noteLabel = document.createElement("label");
+    noteLabel.className = "admin-review-field";
+    noteLabel.textContent = "검토 메모";
+
+    const noteInput = document.createElement("textarea");
+    noteInput.maxLength = 1000;
+    noteInput.placeholder = "반려 이유나 검토 메모를 남길 수 있습니다.";
+    noteLabel.appendChild(noteInput);
+
+    const actions = document.createElement("div");
+    actions.className = "admin-review-actions";
+
+    const reject = document.createElement("button");
+    reject.type = "button";
+    reject.className =
+        "secondary-button compact-button admin-reject-button";
+    reject.textContent = "반려";
+
+    const approve = document.createElement("button");
+    approve.type = "button";
+    approve.className =
+        "primary-button compact-button admin-approve-button";
+    approve.textContent = "사전에 승인";
+
+    [
+        [reject, "reject"],
+        [approve, "approve"]
+    ].forEach(
+        function ([button, action]) {
+            button.addEventListener(
+                "click",
+                async function () {
+                    reject.disabled = true;
+                    approve.disabled = true;
+
+                    try {
+                        const changed = await reviewSubmission(
+                            submission,
+                            action,
+                            imageInput.value,
+                            noteInput.value
+                        );
+
+                        if (!changed) {
+                            reject.disabled = false;
+                            approve.disabled = false;
+                            return;
+                        }
+
+                        adminReviewStatus.textContent =
+                            `${submission.name} 제안을 ${action === "approve" ? "승인" : "반려"}했습니다.`;
+                        await loadAdminSubmissions();
+
+                        if (action === "approve") {
+                            await loadDictionary();
+                        }
+
+                    } catch (error) {
+                        adminReviewStatus.textContent = error.message;
+                        reject.disabled = false;
+                        approve.disabled = false;
+                    }
+                }
+            );
+        }
+    );
+
+    actions.append(reject, approve);
+    card.append(imageLabel, noteLabel, actions);
+    adminSubmissionList.appendChild(card);
+}
+
+
+async function loadAdminSubmissions() {
+    adminReviewStatus.textContent =
+        "검토 대기 제안을 불러오고 있습니다.";
+    adminSubmissionList.replaceChildren();
+
+    try {
+        const data = await requestJSON(
+            "/api/admin-submissions"
+        );
+        const submissions = data.submissions || [];
+
+        adminReviewStatus.textContent = submissions.length
+            ? `검토 대기 ${submissions.length}건`
+            : "현재 검토를 기다리는 제안이 없습니다.";
+
+        submissions.forEach(renderAdminSubmission);
+
+    } catch (error) {
+        if (error.message.includes("로그인")) {
+            setAdminView(false);
+        }
+
+        adminReviewStatus.textContent = error.message;
+    }
+}
+
+
+if (window.location.hash === "#admin") {
+    openAdminDialog();
 }
 
 

@@ -288,6 +288,61 @@
             <button id="dictionaryResetButton" class="secondary-button" type="button">초기화</button>
         </form>
 
+        <details class="submission-panel">
+            <summary>사전에 없는 기구 제안하기</summary>
+            <p class="submission-intro">
+                기구 정보를 보내면 관리자 검토 후 사전에 등록됩니다.
+            </p>
+
+            <form id="equipmentSubmissionForm" class="submission-form">
+                <label>
+                    <span>기구 이름</span>
+                    <input id="submissionName" name="name" maxlength="100" required>
+                </label>
+
+                <label>
+                    <span>분류</span>
+                    <input id="submissionCategory" name="category" maxlength="100" placeholder="예: 유리 기구" required>
+                </label>
+
+                <label class="full-width">
+                    <span>자세한 설명과 용도</span>
+                    <textarea id="submissionPurpose" name="purpose" maxlength="1500" required></textarea>
+                </label>
+
+                <label class="full-width">
+                    <span>구조</span>
+                    <textarea id="submissionStructure" name="structure" maxlength="1500" required></textarea>
+                </label>
+
+                <label class="full-width">
+                    <span>사용 방법</span>
+                    <textarea id="submissionUsage" name="usage" maxlength="2500" placeholder="1. 준비한다.&#10;2. 시료를 넣는다.&#10;3. 관찰한다." required></textarea>
+                </label>
+
+                <label class="full-width">
+                    <span>주의사항</span>
+                    <textarea id="submissionCaution" name="caution" maxlength="1500" placeholder="• 보호 장비를 착용한다.&#10;• 사용 후 깨끗이 정리한다." required></textarea>
+                </label>
+
+                <label class="full-width">
+                    <span>사진 주소 <small>(선택)</small></span>
+                    <input id="submissionImageUrl" name="image_url" type="url" maxlength="1000" placeholder="https://...">
+                </label>
+
+                <label class="submission-honeypot" aria-hidden="true">
+                    <span>웹사이트</span>
+                    <input id="submissionWebsite" name="website" tabindex="-1" autocomplete="off">
+                </label>
+
+                <button id="equipmentSubmissionButton" class="primary-button full-width" type="submit">
+                    관리자에게 제안 보내기
+                </button>
+            </form>
+
+            <p id="equipmentSubmissionStatus" class="section-status" role="status"></p>
+        </details>
+
         <nav
             id="dictionaryInitialNav"
             class="initial-nav"
@@ -333,9 +388,40 @@
 
 </main>
 
+<dialog id="adminDialog" class="admin-dialog" aria-labelledby="adminDialogTitle">
+    <div class="admin-dialog-header">
+        <div>
+            <p class="admin-eyebrow">PRIVATE REVIEW ROOM</p>
+            <h2 id="adminDialogTitle">관리자 검토실</h2>
+        </div>
+        <button id="adminCloseButton" class="admin-close-button" type="button" aria-label="관리자 검토실 닫기">×</button>
+    </div>
+
+    <section id="adminLoginPanel">
+        <p class="section-description">등록 제안을 승인하거나 반려하려면 관리자 비밀번호를 입력하세요.</p>
+        <form id="adminLoginForm" class="admin-login-form">
+            <label>
+                <span>관리자 비밀번호</span>
+                <input id="adminPassword" type="password" maxlength="200" autocomplete="current-password" required>
+            </label>
+            <button id="adminLoginButton" class="primary-button" type="submit">검토실 입장</button>
+        </form>
+        <p id="adminLoginStatus" class="section-status" role="status"></p>
+    </section>
+
+    <section id="adminReviewPanel" hidden>
+        <div class="admin-review-toolbar">
+            <p id="adminReviewStatus" class="section-status" role="status"></p>
+            <button id="adminLogoutButton" class="secondary-button compact-button" type="button">나가기</button>
+        </div>
+        <div id="adminSubmissionList" class="admin-submission-list"></div>
+    </section>
+</dialog>
+
 <footer class="site-footer">
     실험기구 사진의 저작자와 라이선스는
     <a href="image-credits.html">이미지 출처</a>에서 확인할 수 있습니다.
+    <button id="adminEntryButton" class="admin-entry-button" type="button" aria-label="관리자 검토실 열기">관리</button>
 </footer>
 
 

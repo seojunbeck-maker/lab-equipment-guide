@@ -598,6 +598,231 @@ button:disabled {
     font-size: 14px;
 }
 
+.record-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.submission-panel {
+    margin: 18px 0;
+    padding: 16px;
+    border: 1px dashed #b9b9b9;
+    border-radius: 10px;
+    background: #fcfcfc;
+}
+
+.submission-panel > summary {
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+}
+
+.submission-intro {
+    margin: 14px 0 18px;
+    color: #666666;
+    text-align: center;
+}
+
+.submission-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.submission-form label,
+.admin-login-form label,
+.admin-review-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.submission-form input,
+.submission-form textarea,
+.admin-login-form input,
+.admin-review-field input,
+.admin-review-field textarea {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    background: white;
+    color: #222222;
+    font: inherit;
+}
+
+.submission-form textarea,
+.admin-review-field textarea {
+    min-height: 105px;
+    resize: vertical;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.submission-honeypot {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.admin-entry-button {
+    margin: 0 0 0 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #aaaaaa;
+    font-size: 11px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.admin-dialog {
+    width: min(760px, calc(100% - 28px));
+    max-height: calc(100vh - 40px);
+    padding: 24px;
+    border: 1px solid #343434;
+    border-radius: 16px;
+    background: #171717;
+    color: #f4f4f4;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+}
+
+.admin-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+}
+
+.admin-dialog-header,
+.admin-review-toolbar,
+.admin-review-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.admin-dialog h2,
+.admin-dialog h3,
+.admin-dialog p {
+    color: inherit;
+}
+
+.admin-dialog h2 {
+    margin: 2px 0 20px;
+}
+
+.admin-eyebrow {
+    margin: 0;
+    color: #8f8f8f !important;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+}
+
+.admin-close-button {
+    width: 38px;
+    height: 38px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #4a4a4a;
+    border-radius: 50%;
+    background: #242424;
+    color: white;
+    font-size: 24px;
+    line-height: 1;
+}
+
+.admin-login-form {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: end;
+    margin-top: 20px;
+}
+
+.admin-login-form button {
+    margin: 0;
+}
+
+.admin-dialog .section-status {
+    color: #cfcfcf;
+}
+
+.admin-submission-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.admin-submission-card {
+    padding: 18px;
+    border: 1px solid #3f3f3f;
+    border-radius: 12px;
+    background: #222222;
+}
+
+.admin-submission-card h3 {
+    margin: 0 0 6px;
+}
+
+.admin-submission-meta {
+    margin: 0 0 16px !important;
+    color: #aaaaaa !important;
+    font-size: 13px;
+}
+
+.admin-submission-card dl {
+    display: grid;
+    grid-template-columns: 82px 1fr;
+    gap: 9px 12px;
+    margin: 16px 0;
+}
+
+.admin-submission-card dt {
+    color: #aaaaaa;
+    font-weight: bold;
+}
+
+.admin-submission-card dd {
+    margin: 0;
+    white-space: pre-line;
+    line-height: 1.55;
+}
+
+.admin-submission-card img {
+    width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: white;
+}
+
+.admin-review-field {
+    margin-top: 12px;
+}
+
+.admin-review-actions {
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.admin-approve-button {
+    background: #e7e7e7;
+    color: #111111;
+}
+
+.admin-reject-button {
+    border-color: #6d4242;
+    background: #351f1f;
+    color: #f0d1d1;
+}
+
 .credit-list {
     margin: 0;
     padding-left: 22px;
@@ -678,6 +903,30 @@ button:disabled {
 
     .record-meta {
         text-align: left;
+    }
+
+    .record-actions,
+    .admin-review-toolbar,
+    .admin-review-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .submission-form,
+    .admin-login-form {
+        grid-template-columns: 1fr;
+    }
+
+    .submission-form .full-width {
+        grid-column: auto;
+    }
+
+    .admin-submission-card dl {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-submission-card dd {
+        margin-bottom: 5px;
     }
 
 }

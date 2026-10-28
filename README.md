@@ -66,3 +66,17 @@
 
 \- Supabase: 실험기구 정보 데이터베이스
 
+
+\## 사전 등록 제안과 관리자 검토
+
+
+\- 사용자는 사전 화면에서 새 실험기구 정보를 제안할 수 있다.
+
+\- 제안은 `equipment_submissions`에 `pending` 상태로 저장되며 공개 조회되지 않는다.
+
+\- 관리자는 `#admin` 검토실에서 로그인한 뒤 제안을 승인하거나 반려한다.
+
+\- 승인은 기구 등록과 제안 상태 변경을 하나의 데이터베이스 작업으로 처리한다.
+
+\- 관리자 비밀번호, 세션 서명값, Edge Function 호출 토큰은 각각 `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `ADMIN_EDGE_TOKEN` Vercel Secret으로만 보관한다.
+
