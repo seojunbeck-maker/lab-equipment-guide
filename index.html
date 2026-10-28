@@ -211,12 +211,12 @@
 
             <div class="detail-box">
                 <h3>사용법</h3>
-                <p id="detailUsage"></p>
+                <ol id="detailUsage" class="equipment-steps"></ol>
             </div>
 
             <div class="detail-box">
                 <h3>주의사항</h3>
-                <p id="detailCaution"></p>
+                <ul id="detailCaution" class="equipment-cautions"></ul>
             </div>
 
         </div>
@@ -288,6 +288,12 @@
             <button id="dictionaryResetButton" class="secondary-button" type="button">초기화</button>
         </form>
 
+        <nav
+            id="dictionaryInitialNav"
+            class="initial-nav"
+            aria-label="실험기구 사전 초성 바로가기"
+        ></nav>
+
         <p id="dictionaryStatus" class="section-status"></p>
         <div id="dictionaryList" class="equipment-grid"></div>
     </section>
@@ -316,6 +322,11 @@
     >
         <h2>즐겨찾기</h2>
         <p class="section-description">자주 확인하는 실험기구를 모아볼 수 있습니다.</p>
+        <nav
+            id="favoritesInitialNav"
+            class="initial-nav"
+            aria-label="즐겨찾기 초성 바로가기"
+        ></nav>
         <p id="favoritesStatus" class="section-status"></p>
         <div id="favoritesList" class="record-list"></div>
     </section>

@@ -440,6 +440,56 @@ button:disabled {
     color: #666666;
 }
 
+.initial-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 16px 0 8px;
+    padding: 12px;
+    border: 1px solid #dddddd;
+    border-radius: 10px;
+    background: #fafafa;
+}
+
+.initial-nav[hidden] {
+    display: none;
+}
+
+.initial-nav-label {
+    width: 100%;
+    margin-bottom: 4px;
+    color: #666666;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.initial-nav-button {
+    min-width: 36px;
+    min-height: 36px;
+    margin: 0;
+    padding: 6px 8px;
+    border: 1px solid #bbbbbb;
+    border-radius: 8px;
+    background: white;
+    color: #222222;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.initial-nav-button:not(:disabled):hover,
+.initial-nav-button:not(:disabled):focus-visible {
+    border-color: #444444;
+    background: #eeeeee;
+}
+
+.initial-nav-button:disabled {
+    color: #bbbbbb;
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .equipment-grid,
 .record-list {
     display: grid;
@@ -453,6 +503,14 @@ button:disabled {
     border: 1px solid #dddddd;
     border-radius: 10px;
     background: #fafafa;
+}
+
+.initial-group-heading {
+    margin: 14px 0 0;
+    padding: 7px 4px;
+    border-bottom: 2px solid #333333;
+    scroll-margin-top: 20px;
+    font-size: 20px;
 }
 
 .equipment-card-header,
@@ -502,6 +560,29 @@ button:disabled {
 .equipment-extra p {
     margin: 0;
     white-space: pre-line;
+}
+
+.equipment-steps,
+.equipment-cautions {
+    margin: 0;
+    padding-left: 25px;
+    color: #444444;
+    line-height: 1.65;
+}
+
+.equipment-steps li,
+.equipment-cautions li {
+    margin-bottom: 9px;
+    padding-left: 3px;
+}
+
+.equipment-steps li:last-child,
+.equipment-cautions li:last-child {
+    margin-bottom: 0;
+}
+
+.equipment-cautions li::marker {
+    color: #b44a2b;
 }
 
 .compact-button {

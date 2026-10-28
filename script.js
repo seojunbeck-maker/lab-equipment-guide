@@ -121,6 +121,9 @@ const dictionaryStatus =
 const dictionaryList =
     document.getElementById("dictionaryList");
 
+const dictionaryInitialNav =
+    document.getElementById("dictionaryInitialNav");
+
 const historySection =
     document.getElementById("historySection");
 
@@ -138,6 +141,29 @@ const favoritesStatus =
 
 const favoritesList =
     document.getElementById("favoritesList");
+
+const favoritesInitialNav =
+    document.getElementById("favoritesInitialNav");
+
+
+const HANGUL_INITIALS = [
+    "ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ",
+    "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
+];
+
+const HANGUL_CHOSEONG = [
+    "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ",
+    "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ",
+    "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
+];
+
+const HANGUL_INITIAL_BASE = {
+    "ㄲ": "ㄱ",
+    "ㄸ": "ㄷ",
+    "ㅃ": "ㅂ",
+    "ㅆ": "ㅅ",
+    "ㅉ": "ㅈ"
+};
 
 
 let currentFile = null;
@@ -818,12 +844,16 @@ confirmButton.addEventListener(
                 equipment.structure || "-";
 
 
-            detailUsage.textContent =
-                equipment.usage || "-";
+            renderUsageList(
+                detailUsage,
+                equipment.usage
+            );
 
 
-            detailCaution.textContent =
-                equipment.caution || "-";
+            renderCautionList(
+                detailCaution,
+                equipment.caution
+            );
 
 
             /*
@@ -1253,6 +1283,8 @@ async function loadFavorites() {
         "즐겨찾기를 불러오고 있습니다.";
 
     favoritesList.replaceChildren();
+    favoritesInitialNav.replaceChildren();
+    favoritesInitialNav.hidden = true;
 
     try {
 
@@ -1263,8 +1295,36 @@ async function loadFavorites() {
             ? `즐겨찾기 ${favorites.length}개`
             : "아직 등록된 즐겨찾기가 없습니다.";
 
-        favorites.forEach(
+        const sortedFavorites = favorites.slice().sort(
+            (a, b) => a.equipment_name.localeCompare(
+                b.equipment_name,
+                "ko"
+            )
+        );
+
+        renderInitialNavigation(
+            favoritesInitialNav,
+            sortedFavorites.map(item => item.equipment_name),
+            "favorites"
+        );
+
+        let previousInitial = "";
+
+        sortedFavorites.forEach(
             function (item) {
+
+                const initial = getHangulInitial(
+                    item.equipment_name
+                );
+
+                if (initial !== previousInitial) {
+                    appendInitialHeading(
+                        favoritesList,
+                        initial,
+                        "favorites"
+                    );
+                    previousInitial = initial;
+                }
 
                 const card =
                     document.createElement("article");
@@ -1359,6 +1419,8 @@ async function loadDictionary(recordSearch = false) {
         "기구 목록을 불러오고 있습니다.";
 
     dictionaryList.replaceChildren();
+    dictionaryInitialNav.replaceChildren();
+    dictionaryInitialNav.hidden = true;
 
     try {
 
@@ -1405,7 +1467,37 @@ async function loadDictionary(recordSearch = false) {
             ? `실험기구 ${equipment.length}개`
             : "검색 결과가 없습니다.";
 
-        equipment.forEach(renderEquipmentCard);
+        const sortedEquipment = equipment.slice().sort(
+            (a, b) => a.name.localeCompare(
+                b.name,
+                "ko"
+            )
+        );
+
+        renderInitialNavigation(
+            dictionaryInitialNav,
+            sortedEquipment.map(item => item.name),
+            "dictionary"
+        );
+
+        let previousInitial = "";
+
+        sortedEquipment.forEach(
+            function (item) {
+                const initial = getHangulInitial(item.name);
+
+                if (initial !== previousInitial) {
+                    appendInitialHeading(
+                        dictionaryList,
+                        initial,
+                        "dictionary"
+                    );
+                    previousInitial = initial;
+                }
+
+                renderEquipmentCard(item);
+            }
+        );
 
         if (recordSearch && (nameValue || categoryValue)) {
             try {
@@ -1490,6 +1582,198 @@ function populateCategoryOptions(equipment) {
             dictionaryCategory.appendChild(option);
         }
     );
+}
+
+
+function getHangulInitial(value) {
+
+    const firstCharacter =
+        String(value || "").trim().charAt(0);
+
+    if (!firstCharacter) {
+        return "#";
+    }
+
+    const code = firstCharacter.charCodeAt(0);
+
+    if (code < 0xAC00 || code > 0xD7A3) {
+        return "#";
+    }
+
+    const initial = HANGUL_CHOSEONG[
+        Math.floor((code - 0xAC00) / 588)
+    ];
+
+    return HANGUL_INITIAL_BASE[initial] || initial;
+}
+
+
+function getInitialAnchorId(prefix, initial) {
+
+    const index = HANGUL_INITIALS.indexOf(initial);
+
+    return `${prefix}-initial-${index >= 0 ? index : "other"}`;
+}
+
+
+function renderInitialNavigation(
+    container,
+    names,
+    prefix
+) {
+
+    container.replaceChildren();
+
+    if (names.length === 0) {
+        container.hidden = true;
+        return;
+    }
+
+    container.hidden = false;
+
+    const label = document.createElement("span");
+    label.className = "initial-nav-label";
+    label.textContent = "초성 바로가기";
+    container.appendChild(label);
+
+    const availableInitials = new Set(
+        names.map(getHangulInitial)
+    );
+
+    HANGUL_INITIALS.forEach(
+        function (initial) {
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "initial-nav-button";
+            button.textContent = initial;
+            button.disabled = !availableInitials.has(initial);
+            button.setAttribute(
+                "aria-label",
+                `${initial}으로 시작하는 기구로 이동`
+            );
+
+            button.addEventListener(
+                "click",
+                function () {
+                    const target = document.getElementById(
+                        getInitialAnchorId(prefix, initial)
+                    );
+
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start"
+                        });
+                    }
+                }
+            );
+
+            container.appendChild(button);
+        }
+    );
+}
+
+
+function appendInitialHeading(
+    container,
+    initial,
+    prefix
+) {
+
+    const heading = document.createElement("h3");
+    heading.className = "initial-group-heading";
+    heading.id = getInitialAnchorId(prefix, initial);
+    heading.textContent = initial;
+    container.appendChild(heading);
+}
+
+
+function splitNumberedSteps(value) {
+
+    const text = String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!text) {
+        return [];
+    }
+
+    const markers = Array.from(
+        text.matchAll(/(?:^|\s)(\d+)[.)]\s*/g)
+    );
+
+    if (markers.length === 0) {
+        return [text];
+    }
+
+    return markers.map(
+        function (marker, index) {
+            const start = marker.index + marker[0].length;
+            const end = index + 1 < markers.length
+                ? markers[index + 1].index
+                : text.length;
+
+            return text.slice(start, end).trim();
+        }
+    ).filter(Boolean);
+}
+
+
+function splitCautionItems(value) {
+
+    const text = String(value || "").trim();
+
+    if (!text) {
+        return [];
+    }
+
+    const lineItems = text
+        .split(/\r?\n+/)
+        .map(item => item.replace(/^[•·\-]\s*/, "").trim())
+        .filter(Boolean);
+
+    if (lineItems.length > 1) {
+        return lineItems;
+    }
+
+    return (
+        text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text]
+    ).map(
+        item => item.replace(/^[•·\-]\s*/, "").trim()
+    ).filter(Boolean);
+}
+
+
+function renderUsageList(element, value) {
+
+    const steps = splitNumberedSteps(value);
+    element.replaceChildren();
+
+    (steps.length ? steps : ["등록된 정보가 없습니다."])
+        .forEach(
+            function (step) {
+                const item = document.createElement("li");
+                item.textContent = step;
+                element.appendChild(item);
+            }
+        );
+}
+
+
+function renderCautionList(element, value) {
+
+    const cautions = splitCautionItems(value);
+    element.replaceChildren();
+
+    (cautions.length ? cautions : ["등록된 정보가 없습니다."])
+        .forEach(
+            function (caution) {
+                const item = document.createElement("li");
+                item.textContent = caution;
+                element.appendChild(item);
+            }
+        );
 }
 
 
@@ -1586,23 +1870,33 @@ function renderEquipmentCard(equipment) {
     details.appendChild(summary);
 
     [
-        ["구조", equipment.structure],
-        ["사용 방법", equipment.usage],
-        ["주의사항", equipment.caution]
+        ["구조", equipment.structure, "text"],
+        ["사용 방법", equipment.usage, "steps"],
+        ["주의사항", equipment.caution, "cautions"]
     ].forEach(
-        function ([label, value]) {
+        function ([label, value, type]) {
 
             const heading =
                 document.createElement("h4");
 
             heading.textContent = label;
 
-            const text =
-                document.createElement("p");
+            let content;
 
-            text.textContent = value || "등록된 정보가 없습니다.";
+            if (type === "steps") {
+                content = document.createElement("ol");
+                content.className = "equipment-steps";
+                renderUsageList(content, value);
+            } else if (type === "cautions") {
+                content = document.createElement("ul");
+                content.className = "equipment-cautions";
+                renderCautionList(content, value);
+            } else {
+                content = document.createElement("p");
+                content.textContent = value || "등록된 정보가 없습니다.";
+            }
 
-            details.append(heading, text);
+            details.append(heading, content);
         }
     );
 
