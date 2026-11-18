@@ -327,6 +327,40 @@ button:disabled {
     line-height: 1.5;
 }
 
+.candidate-features {
+    margin-top: 13px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #f0f2f4;
+    color: #444444;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.comparison-notice {
+    margin: 18px 0;
+    padding: 16px 18px;
+    border: 1px solid #c99b47;
+    border-radius: 10px;
+    background: #fff8e8;
+    color: #5b4319;
+    text-align: left;
+    line-height: 1.55;
+}
+
+.comparison-notice[hidden] {
+    display: none;
+}
+
+.comparison-list {
+    margin: 12px 0 0;
+    padding-left: 22px;
+}
+
+.comparison-list li + li {
+    margin-top: 8px;
+}
+
 
 #selectedResult {
     margin-top: 25px;
@@ -419,6 +453,57 @@ button:disabled {
     font-weight: bold;
 }
 
+.dictionary-search-field {
+    position: relative;
+}
+
+.autocomplete-list {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 5px);
+    right: 0;
+    left: 0;
+    overflow: hidden;
+    border: 1px solid #bfc3c8;
+    border-radius: 9px;
+    background: white;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.autocomplete-list[hidden] {
+    display: none;
+}
+
+.autocomplete-option {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    margin: 0;
+    padding: 10px 13px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    border-radius: 0;
+    background: white;
+    color: #222222;
+    text-align: left;
+}
+
+.autocomplete-option + .autocomplete-option {
+    border-top: 1px solid #eeeeee;
+}
+
+.autocomplete-option:hover,
+.autocomplete-option:focus-visible {
+    background: #f0f2f4;
+}
+
+.autocomplete-option span {
+    color: #666666;
+    font-size: 13px;
+}
+
 .dictionary-search input,
 .dictionary-search select {
     width: 100%;
@@ -503,6 +588,17 @@ button:disabled {
     border: 1px solid #dddddd;
     border-radius: 10px;
     background: #fafafa;
+}
+
+.equipment-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 520px;
+}
+
+.equipment-english-name {
+    color: #777777 !important;
+    font-size: 13px;
+    font-style: italic;
 }
 
 .initial-group-heading {
@@ -893,6 +989,16 @@ button:disabled {
 
     .dictionary-search {
         grid-template-columns: 1fr;
+    }
+
+    .dictionary-search button,
+    .autocomplete-option {
+        min-height: 46px;
+    }
+
+    .candidate,
+    .comparison-notice {
+        padding: 15px;
     }
 
     .equipment-card-header,

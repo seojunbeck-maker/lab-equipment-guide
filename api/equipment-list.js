@@ -1,4 +1,9 @@
 import { supabaseRequest } from "../lib/supabase-rest.js";
+import {
+    EQUIPMENT_GROUP_CATEGORIES,
+    addEquipmentSearchMetadata,
+    equipmentMatchesSearch
+} from "../lib/equipment-search.js";
 
 export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
@@ -28,17 +33,9 @@ export default async function handler(req, res) {
 
         const params = new URLSearchParams({
             select:
-                "id,name,category,purpose,structure,usage,caution,image_url",
+                "id,name,english_name,aliases,key_features,category,purpose,structure,usage,caution,image_url",
             order: "name.asc"
         });
-
-        if (name) {
-            params.set("name", `ilike.*${name.replace(/\*/g, "")}*`);
-        }
-
-        if (category) {
-            params.set("category", `eq.${category}`);
-        }
 
         const { response, data } = await supabaseRequest(
             "equipment",
@@ -56,8 +53,27 @@ export default async function handler(req, res) {
             });
         }
 
+        let equipment = Array.isArray(data)
+            ? data.map(addEquipmentSearchMetadata)
+            : [];
+
+        if (name) {
+            equipment = equipment.filter(item =>
+                equipmentMatchesSearch(item, name)
+            );
+        }
+
+        if (category) {
+            equipment = equipment.filter(item =>
+                EQUIPMENT_GROUP_CATEGORIES.includes(category)
+                    ? item.group_category === category
+                    : item.category === category
+            );
+        }
+
         return res.status(200).json({
-            equipment: Array.isArray(data) ? data : []
+            equipment,
+            categories: EQUIPMENT_GROUP_CATEGORIES
         });
     } catch (error) {
         console.error("Equipment list API error:", error);

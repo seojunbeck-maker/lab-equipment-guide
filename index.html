@@ -145,7 +145,12 @@
         <div id="candidateList"></div>
 
 
-        <p id="lowConfidenceMessage"></p>
+        <div
+            id="lowConfidenceMessage"
+            class="comparison-notice"
+            role="status"
+            hidden
+        ></div>
 
 
         <p id="selectedResult">
@@ -271,16 +276,43 @@
     >
         <h2>실험기구 사전</h2>
 
+        <p class="section-description">
+            검색어가 없어도 전체 목록이 표시됩니다. 한국어·영어 이름으로 검색할 수 있습니다.
+        </p>
+
         <form id="dictionarySearchForm" class="dictionary-search">
-            <label>
-                <span>이름 검색</span>
-                <input id="dictionaryName" type="search" placeholder="예: 비커">
-            </label>
+            <div class="dictionary-search-field">
+                <label>
+                    <span>이름 검색</span>
+                    <input
+                        id="dictionaryName"
+                        type="search"
+                        placeholder="예: 메스 실린더, beaker"
+                        autocomplete="off"
+                        aria-autocomplete="list"
+                        aria-controls="dictionaryAutocomplete"
+                        aria-expanded="false"
+                    >
+                </label>
+                <div
+                    id="dictionaryAutocomplete"
+                    class="autocomplete-list"
+                    role="listbox"
+                    hidden
+                ></div>
+            </div>
 
             <label>
-                <span>분류</span>
+                <span>대분류</span>
                 <select id="dictionaryCategory">
-                    <option value="">전체 분류</option>
+                    <option value="">전체</option>
+                    <option value="유리기구">유리기구</option>
+                    <option value="측정기구">측정기구</option>
+                    <option value="가열기구">가열기구</option>
+                    <option value="분리기구">분리기구</option>
+                    <option value="배양기구">배양기구</option>
+                    <option value="관찰기구">관찰기구</option>
+                    <option value="기타">기타</option>
                 </select>
             </label>
 

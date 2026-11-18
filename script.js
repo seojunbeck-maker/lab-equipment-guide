@@ -112,6 +112,9 @@ const dictionaryName =
 const dictionaryCategory =
     document.getElementById("dictionaryCategory");
 
+const dictionaryAutocomplete =
+    document.getElementById("dictionaryAutocomplete");
+
 const dictionaryResetButton =
     document.getElementById("dictionaryResetButton");
 
@@ -223,10 +226,135 @@ let favoriteNames = new Set();
 
 let dictionaryRequestId = 0;
 
+let equipmentCatalog = [];
+
+let equipmentCatalogPromise = null;
+
 /*
 중복 분석 방지
 */
 let isAnalyzing = false;
+
+
+function normalizeSearchValue(value) {
+    return String(value || "")
+        .normalize("NFKC")
+        .toLocaleLowerCase("ko-KR")
+        .replace(/[\s·_\-()/]+/g, "")
+        .trim();
+}
+
+
+function getEquipmentAliases(equipment) {
+    if (Array.isArray(equipment?.aliases)) {
+        return equipment.aliases;
+    }
+
+    if (typeof equipment?.aliases === "string") {
+        return equipment.aliases
+            .split(",")
+            .map(alias => alias.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+}
+
+
+function getEquipmentSearchTerms(equipment) {
+    return [
+        equipment?.name,
+        equipment?.english_name,
+        ...getEquipmentAliases(equipment)
+    ]
+        .map(normalizeSearchValue)
+        .filter(Boolean);
+}
+
+
+function equipmentMatchesQuery(equipment, query) {
+    const normalizedQuery = normalizeSearchValue(query);
+
+    if (!normalizedQuery) {
+        return true;
+    }
+
+    return getEquipmentSearchTerms(equipment).some(
+        term => term.includes(normalizedQuery)
+    );
+}
+
+
+function getEquipmentFeatureText(equipment) {
+    if (equipment?.key_features) {
+        return equipment.key_features;
+    }
+
+    const structure = String(equipment?.structure || "").trim();
+    const firstSentence = structure.match(/^[^.!?]+[.!?]?/u)?.[0]?.trim();
+
+    return firstSentence || "등록된 외형 특징이 없습니다.";
+}
+
+
+function findCatalogEquipment(query, catalog = equipmentCatalog) {
+    const normalizedQuery = normalizeSearchValue(query);
+
+    if (!normalizedQuery) {
+        return null;
+    }
+
+    return catalog.find(item =>
+        getEquipmentSearchTerms(item).includes(normalizedQuery)
+    ) || catalog.find(item =>
+        getEquipmentSearchTerms(item).some(
+            term => term.includes(normalizedQuery) || normalizedQuery.includes(term)
+        )
+    ) || null;
+}
+
+
+async function getEquipmentCatalog(forceRefresh = false) {
+    if (forceRefresh) {
+        equipmentCatalogPromise = null;
+    }
+
+    if (!equipmentCatalogPromise) {
+        equipmentCatalogPromise = requestJSON("/api/equipment-list")
+            .then(data => {
+                equipmentCatalog = Array.isArray(data.equipment)
+                    ? data.equipment
+                    : [];
+                return equipmentCatalog;
+            })
+            .catch(error => {
+                equipmentCatalogPromise = null;
+                throw error;
+            });
+    }
+
+    return equipmentCatalogPromise;
+}
+
+
+async function enrichAnalysisCandidates(candidates) {
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+        return [];
+    }
+
+    const catalog = await getEquipmentCatalog();
+
+    return candidates.map(candidate => {
+        const equipment = findCatalogEquipment(candidate.name, catalog);
+
+        return {
+            ...candidate,
+            name: equipment?.name || candidate.name,
+            key_features: getEquipmentFeatureText(equipment),
+            english_name: equipment?.english_name || null
+        };
+    });
+}
 
 
 /* =========================
@@ -595,8 +723,21 @@ analyzeButton.addEventListener(
                 "block";
 
 
+            let enrichedCandidates = data.candidates;
+
+            try {
+                enrichedCandidates = await enrichAnalysisCandidates(
+                    data.candidates
+                );
+            } catch (metadataError) {
+                console.error(
+                    "Candidate metadata lookup failed:",
+                    metadataError
+                );
+            }
+
             showCandidates(
-                data.candidates,
+                enrichedCandidates,
                 data.lowConfidence
             );
 
@@ -659,8 +800,8 @@ function showCandidates(
         "선택된 기구가 없습니다.";
 
 
-    lowConfidenceMessage.textContent =
-        "";
+    lowConfidenceMessage.replaceChildren();
+    lowConfidenceMessage.hidden = true;
 
 
     if (
@@ -676,13 +817,41 @@ function showCandidates(
     }
 
 
-    /*
-    50% 미만 후보만 남은 경우
-    */
-    if (lowConfidence) {
+    const topConfidence = Number(candidates[0]?.confidence) || 0;
+    const secondConfidence = Number(candidates[1]?.confidence) || 0;
+    const confidenceGap = candidates.length > 1
+        ? Math.abs(topConfidence - secondConfidence)
+        : Number.POSITIVE_INFINITY;
+    const needsComparison = Boolean(
+        lowConfidence ||
+        topConfidence < 70 ||
+        confidenceGap <= 15
+    );
 
-        lowConfidenceMessage.textContent =
-            "정확도가 낮은 결과입니다. 사진을 확인한 뒤 후보를 선택해 주세요.";
+    if (needsComparison) {
+        const message = document.createElement("strong");
+        message.textContent =
+            "인식 결과가 확실하지 않습니다. 아래 특징을 비교해 직접 확인하세요.";
+
+        const comparison = document.createElement("ul");
+        comparison.className = "comparison-list";
+
+        candidates.slice(0, 3).forEach(candidate => {
+            const item = document.createElement("li");
+            const name = document.createElement("strong");
+            name.textContent = `${candidate.name}: `;
+            item.append(
+                name,
+                document.createTextNode(
+                    candidate.key_features ||
+                    "등록된 외형 특징이 없습니다."
+                )
+            );
+            comparison.appendChild(item);
+        });
+
+        lowConfidenceMessage.append(message, comparison);
+        lowConfidenceMessage.hidden = false;
     }
 
 
@@ -718,10 +887,9 @@ function showCandidates(
                 );
 
 
-            /*
-            판단 근거 삭제
-            이름 + 정확도만 표시
-            */
+            const featureText = candidate.key_features ||
+                "등록된 외형 특징이 없습니다.";
+
             item.innerHTML = `
 
                 <div class="candidate-name">
@@ -742,6 +910,11 @@ function showCandidates(
                         style="width:${confidence}%"
                     ></div>
 
+                </div>
+
+                <div class="candidate-features">
+                    <strong>특징:</strong>
+                    ${escapeHTML(featureText)}
                 </div>
 
             `;
@@ -1816,7 +1989,7 @@ function renderAdminSubmission(submission) {
                         await loadAdminSubmissions();
 
                         if (action === "approve") {
-                            await loadDictionary();
+                            await loadDictionary(false, true);
                         }
 
                     } catch (error) {
@@ -1873,9 +2046,60 @@ if (window.location.hash === "#admin") {
 
 dictionarySearchForm.addEventListener(
     "submit",
-    function (event) {
+    async function (event) {
         event.preventDefault();
-        loadDictionary(true);
+        closeDictionaryAutocomplete();
+
+        if (equipmentCatalog.length === 0) {
+            await loadDictionary(true);
+            return;
+        }
+
+        await renderDictionaryResults(true);
+    }
+);
+
+
+dictionaryName.addEventListener(
+    "input",
+    function () {
+        renderDictionaryAutocomplete();
+
+        if (equipmentCatalog.length > 0) {
+            renderDictionaryResults();
+        }
+    }
+);
+
+
+dictionaryName.addEventListener(
+    "keydown",
+    function (event) {
+        if (event.key === "Escape") {
+            closeDictionaryAutocomplete();
+        }
+    }
+);
+
+
+dictionaryCategory.addEventListener(
+    "change",
+    function () {
+        closeDictionaryAutocomplete();
+
+        if (equipmentCatalog.length > 0) {
+            renderDictionaryResults();
+        }
+    }
+);
+
+
+document.addEventListener(
+    "click",
+    function (event) {
+        if (!event.target.closest(".dictionary-search-field")) {
+            closeDictionaryAutocomplete();
+        }
     }
 );
 
@@ -1885,53 +2109,99 @@ dictionaryResetButton.addEventListener(
     function () {
         dictionaryName.value = "";
         dictionaryCategory.value = "";
-        loadDictionary();
+        closeDictionaryAutocomplete();
+
+        if (equipmentCatalog.length > 0) {
+            renderDictionaryResults();
+        } else {
+            loadDictionary();
+        }
     }
 );
 
 
-async function loadDictionary(recordSearch = false) {
+function closeDictionaryAutocomplete() {
+    dictionaryAutocomplete.replaceChildren();
+    dictionaryAutocomplete.hidden = true;
+    dictionaryName.setAttribute("aria-expanded", "false");
+}
 
-    const requestId =
-        ++dictionaryRequestId;
+
+function renderDictionaryAutocomplete() {
+    const query = dictionaryName.value.trim();
+
+    if (!query || equipmentCatalog.length === 0) {
+        closeDictionaryAutocomplete();
+        return;
+    }
+
+    const suggestions = equipmentCatalog
+        .filter(item => equipmentMatchesQuery(item, query))
+        .slice(0, 5);
+
+    dictionaryAutocomplete.replaceChildren();
+
+    if (suggestions.length === 0) {
+        closeDictionaryAutocomplete();
+        return;
+    }
+
+    suggestions.forEach(equipment => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "autocomplete-option";
+        option.setAttribute("role", "option");
+
+        const name = document.createElement("strong");
+        name.textContent = equipment.name;
+        option.appendChild(name);
+
+        if (equipment.english_name) {
+            const englishName = document.createElement("span");
+            englishName.textContent = equipment.english_name;
+            option.appendChild(englishName);
+        }
+
+        option.addEventListener("click", async function () {
+            dictionaryName.value = equipment.name;
+            closeDictionaryAutocomplete();
+            await renderDictionaryResults(true);
+        });
+
+        dictionaryAutocomplete.appendChild(option);
+    });
+
+    dictionaryAutocomplete.hidden = false;
+    dictionaryName.setAttribute("aria-expanded", "true");
+}
+
+
+function getFilteredDictionaryEquipment() {
+    const nameValue = dictionaryName.value.trim();
+    const categoryValue = dictionaryCategory.value;
+
+    return equipmentCatalog.filter(item =>
+        equipmentMatchesQuery(item, nameValue) &&
+        (!categoryValue || item.group_category === categoryValue)
+    );
+}
+
+
+async function loadDictionary(
+    recordSearch = false,
+    forceRefresh = false
+) {
+    const requestId = ++dictionaryRequestId;
 
     dictionaryStatus.textContent =
         "기구 목록을 불러오고 있습니다.";
-
     dictionaryList.replaceChildren();
     dictionaryInitialNav.replaceChildren();
     dictionaryInitialNav.hidden = true;
 
     try {
-
-        const params = new URLSearchParams();
-
-        const nameValue =
-            dictionaryName.value.trim();
-
-        const categoryValue =
-            dictionaryCategory.value;
-
-        if (nameValue) {
-            params.set(
-                "name",
-                nameValue
-            );
-        }
-
-        if (categoryValue) {
-            params.set(
-                "category",
-                categoryValue
-            );
-        }
-
-        const query = params.toString();
-
-        const [data] = await Promise.all([
-            requestJSON(
-                `/api/equipment-list${query ? `?${query}` : ""}`
-            ),
+        await Promise.all([
+            getEquipmentCatalog(forceRefresh),
             refreshFavoriteNames()
         ]);
 
@@ -1939,64 +2209,56 @@ async function loadDictionary(recordSearch = false) {
             return;
         }
 
-        const equipment = data.equipment || [];
-
-        populateCategoryOptions(equipment);
-
-        dictionaryStatus.textContent = equipment.length
-            ? `실험기구 ${equipment.length}개`
-            : "검색 결과가 없습니다.";
-
-        const sortedEquipment = equipment.slice().sort(
-            (a, b) => a.name.localeCompare(
-                b.name,
-                "ko"
-            )
-        );
-
-        renderInitialNavigation(
-            dictionaryInitialNav,
-            sortedEquipment.map(item => item.name),
-            "dictionary"
-        );
-
-        let previousInitial = "";
-
-        sortedEquipment.forEach(
-            function (item) {
-                const initial = getHangulInitial(item.name);
-
-                if (initial !== previousInitial) {
-                    appendInitialHeading(
-                        dictionaryList,
-                        initial,
-                        "dictionary"
-                    );
-                    previousInitial = initial;
-                }
-
-                renderEquipmentCard(item);
-            }
-        );
-
-        if (recordSearch && (nameValue || categoryValue)) {
-            try {
-                await saveDictionarySearch(
-                    nameValue,
-                    categoryValue
-                );
-            } catch (error) {
-                console.error(
-                    "Dictionary history save failed:",
-                    error
-                );
-            }
-        }
-
+        await renderDictionaryResults(recordSearch);
     } catch (error) {
-
         if (requestId === dictionaryRequestId) {
             dictionaryStatus.textContent = error.message;
+        }
+    }
+}
+
+
+async function renderDictionaryResults(recordSearch = false) {
+    const nameValue = dictionaryName.value.trim();
+    const categoryValue = dictionaryCategory.value;
+    const equipment = getFilteredDictionaryEquipment();
+    const sortedEquipment = equipment.slice().sort(
+        (a, b) => a.name.localeCompare(b.name, "ko")
+    );
+
+    dictionaryList.replaceChildren();
+    dictionaryStatus.textContent = sortedEquipment.length
+        ? `실험기구 ${sortedEquipment.length}개`
+        : "검색 결과가 없습니다.";
+
+    renderInitialNavigation(
+        dictionaryInitialNav,
+        sortedEquipment.map(item => item.name),
+        "dictionary"
+    );
+
+    let previousInitial = "";
+
+    sortedEquipment.forEach(item => {
+        const initial = getHangulInitial(item.name);
+
+        if (initial !== previousInitial) {
+            appendInitialHeading(
+                dictionaryList,
+                initial,
+                "dictionary"
+            );
+            previousInitial = initial;
+        }
+
+        renderEquipmentCard(item);
+    });
+
+    if (recordSearch && (nameValue || categoryValue)) {
+        try {
+            await saveDictionarySearch(nameValue, categoryValue);
+        } catch (error) {
+            console.error("Dictionary history save failed:", error);
         }
     }
 }
@@ -2032,34 +2294,6 @@ async function saveDictionarySearch(
                 record_type: "search",
                 search_query: parts.join(" · ")
             })
-        }
-    );
-}
-
-
-function populateCategoryOptions(equipment) {
-
-    if (dictionaryCategory.options.length > 1) {
-        return;
-    }
-
-    const categories = Array.from(
-        new Set(
-            equipment
-                .map(item => item.category)
-                .filter(Boolean)
-        )
-    ).sort();
-
-    categories.forEach(
-        function (category) {
-
-            const option =
-                document.createElement("option");
-
-            option.value = category;
-            option.textContent = category;
-            dictionaryCategory.appendChild(option);
         }
     );
 }
@@ -2281,9 +2515,20 @@ function renderEquipmentCard(equipment) {
         document.createElement("p");
 
     category.textContent =
-        equipment.category || "분류 없음";
+        equipment.group_category
+            ? `${equipment.group_category} · ${equipment.category || "분류 없음"}`
+            : equipment.category || "분류 없음";
 
-    info.append(title, category);
+    info.appendChild(title);
+
+    if (equipment.english_name) {
+        const englishName = document.createElement("p");
+        englishName.className = "equipment-english-name";
+        englishName.textContent = equipment.english_name;
+        info.appendChild(englishName);
+    }
+
+    info.appendChild(category);
 
     const favorite =
         document.createElement("button");
