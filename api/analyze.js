@@ -2,6 +2,39 @@ const MODEL = "gemini-3.5-flash-lite";
 
 const MAX_RETRIES = 2;
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif"
+]);
+
+function hasValidImageSignature(bytes, mimeType) {
+    if (mimeType === "image/jpeg") {
+        return bytes[0] === 0xff && bytes[1] === 0xd8;
+    }
+
+    if (mimeType === "image/png") {
+        return bytes.subarray(0, 8).equals(
+            Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+        );
+    }
+
+    if (mimeType === "image/gif") {
+        const signature = bytes.subarray(0, 6).toString("ascii");
+        return signature === "GIF87a" || signature === "GIF89a";
+    }
+
+    if (mimeType === "image/webp") {
+        return bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+            bytes.subarray(8, 12).toString("ascii") === "WEBP";
+    }
+
+    return false;
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -65,10 +98,30 @@ export default async function handler(req, res) {
             });
         }
 
-        if (!mimeType.startsWith("image/")) {
+        if (!ALLOWED_IMAGE_TYPES.has(mimeType)) {
 
             return res.status(400).json({
-                error: "이미지 파일만 사용할 수 있습니다."
+                error: "이미지 파일만 업로드할 수 있습니다."
+            });
+        }
+
+        let imageBytes;
+
+        try {
+            imageBytes = Buffer.from(image, "base64");
+        } catch {
+            imageBytes = Buffer.alloc(0);
+        }
+
+        if (
+            imageBytes.length === 0 ||
+            imageBytes.length > MAX_IMAGE_BYTES ||
+            !hasValidImageSignature(imageBytes, mimeType)
+        ) {
+            return res.status(400).json({
+                error: imageBytes.length > MAX_IMAGE_BYTES
+                    ? "이미지 크기는 10MB 이하여야 합니다."
+                    : "이미지 파일만 업로드할 수 있습니다."
             });
         }
 
@@ -86,6 +139,8 @@ export default async function handler(req, res) {
 
         const prompt = `
 사진 속 물체가 어떤 과학 실험기구인지 빠르게 분류하라.
+
+사진에 과학 실험기구가 없거나 기구 전체를 확인하기 어려우면 candidates를 빈 배열로 반환한다.
 
 가장 가능성이 높은 실험기구 후보를 최대 3개 제시한다.
 
@@ -249,9 +304,30 @@ confidence:
             });
         }
 
+        const rankedCandidates = parsed.candidates
+            .map(candidate => ({
+                name: String(candidate.name || "").trim(),
+                confidence: Math.round(
+                    Math.max(0, Math.min(100, Number(candidate.confidence) || 0))
+                )
+            }))
+            .filter(candidate => candidate.name)
+            .sort((a, b) => b.confidence - a.confidence);
+
+        if (
+            rankedCandidates.length === 0 ||
+            rankedCandidates[0].confidence < 35
+        ) {
+            return res.status(422).json({
+                code: "NO_EQUIPMENT_DETECTED",
+                error:
+                    "실험기구를 정확하게 식별하지 못했습니다. 기구 전체가 잘 보이는 사진으로 다시 시도해 주세요."
+            });
+        }
+
 
         const candidates =
-            parsed.candidates
+            rankedCandidates
 
                 .map(candidate => ({
                     name:
@@ -288,26 +364,7 @@ confidence:
 
         if (candidates.length === 0) {
 
-            const fallback =
-                parsed.candidates
-                    .map(candidate => ({
-                        name:
-                            String(
-                                candidate.name || ""
-                            ).trim(),
-
-                        confidence:
-                            Math.round(
-                                Number(
-                                    candidate.confidence
-                                ) || 0
-                            )
-                    }))
-                    .sort(
-                        (a, b) =>
-                            b.confidence -
-                            a.confidence
-                    )[0];
+            const fallback = rankedCandidates[0];
 
 
             if (fallback?.name) {

@@ -2,11 +2,21 @@ import {
     parseRequestBody,
     supabaseRequest
 } from "../lib/supabase-rest.js";
+import {
+    authRequiredResponse,
+    getAuthenticatedUser
+} from "../lib/user-auth.js";
 
 export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
 
     try {
+        const { accessToken, user } = await getAuthenticatedUser(req);
+
+        if (!user) {
+            return authRequiredResponse(res);
+        }
+
         if (req.method === "GET") {
             const requestedLimit = Number(req.query.limit ?? 50);
             const limit = Number.isInteger(requestedLimit)
@@ -16,13 +26,14 @@ export default async function handler(req, res) {
             const params = new URLSearchParams({
                 select:
                     "id,record_type,search_query,equipment_name,confidence,created_at",
+                user_id: `eq.${user.id}`,
                 order: "created_at.desc",
                 limit: String(limit)
             });
 
             const { response, data } = await supabaseRequest(
                 "analysis_history",
-                { params }
+                { params, accessToken }
             );
 
             if (!response.ok) {
@@ -63,6 +74,7 @@ export default async function handler(req, res) {
                 }
 
                 insertBody = {
+                    user_id: user.id,
                     record_type: "search",
                     search_query: searchQuery,
                     equipment_name: null,
@@ -84,6 +96,7 @@ export default async function handler(req, res) {
                 }
 
                 insertBody = {
+                    user_id: user.id,
                     record_type: "analysis",
                     search_query: null,
                     equipment_name: equipmentName,
@@ -96,7 +109,8 @@ export default async function handler(req, res) {
                 {
                     method: "POST",
                     body: insertBody,
-                    prefer: "return=representation"
+                    prefer: "return=representation",
+                    accessToken
                 }
             );
 
@@ -122,14 +136,16 @@ export default async function handler(req, res) {
             }
 
             const params = new URLSearchParams({
-                id: `eq.${id}`
+                id: `eq.${id}`,
+                user_id: `eq.${user.id}`
             });
             const { response, data } = await supabaseRequest(
                 "analysis_history",
                 {
                     method: "DELETE",
                     params,
-                    prefer: "return=representation"
+                    prefer: "return=representation",
+                    accessToken
                 }
             );
 

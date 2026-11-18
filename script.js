@@ -10,6 +10,9 @@ const previewText =
 const fileName =
     document.getElementById("fileName");
 
+const uploadStatus =
+    document.getElementById("uploadStatus");
+
 const dropArea =
     document.getElementById("dropArea");
 
@@ -63,6 +66,9 @@ const selectedResult =
 
 const lowConfidenceMessage =
     document.getElementById("lowConfidenceMessage");
+
+const candidateDetailStatus =
+    document.getElementById("candidateDetailStatus");
 
 
 const confirmedEquipment =
@@ -193,6 +199,63 @@ const adminSubmissionList =
 const adminLogoutButton =
     document.getElementById("adminLogoutButton");
 
+const authButton =
+    document.getElementById("authButton");
+
+const userMenu =
+    document.getElementById("userMenu");
+
+const userMenuEmail =
+    document.getElementById("userMenuEmail");
+
+const userMenuItems =
+    document.querySelectorAll("[data-user-action]");
+
+const authDialog =
+    document.getElementById("authDialog");
+
+const authDialogTitle =
+    document.getElementById("authDialogTitle");
+
+const authCloseButton =
+    document.getElementById("authCloseButton");
+
+const loginModeButton =
+    document.getElementById("loginModeButton");
+
+const signupModeButton =
+    document.getElementById("signupModeButton");
+
+const loginForm =
+    document.getElementById("loginForm");
+
+const signupForm =
+    document.getElementById("signupForm");
+
+const loginEmail =
+    document.getElementById("loginEmail");
+
+const loginPassword =
+    document.getElementById("loginPassword");
+
+const signupEmail =
+    document.getElementById("signupEmail");
+
+const signupPassword =
+    document.getElementById("signupPassword");
+
+const signupPasswordConfirm =
+    document.getElementById("signupPasswordConfirm");
+
+const loginSubmitButton =
+    document.getElementById("loginSubmitButton");
+
+const signupSubmitButton =
+    document.getElementById("signupSubmitButton");
+
+const authStatus =
+    document.getElementById("authStatus");
+
 
 const HANGUL_INITIALS = [
     "ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ",
@@ -230,10 +293,394 @@ let equipmentCatalog = [];
 
 let equipmentCatalogPromise = null;
 
+let authClient = null;
+
+let authInitializationPromise = null;
+
+let currentSession = null;
+
+let currentUser = null;
+
 /*
 중복 분석 방지
 */
 let isAnalyzing = false;
+
+
+/* =========================
+   Supabase 사용자 인증
+========================= */
+
+function setAuthStatus(message, success = false) {
+    authStatus.textContent = message || "";
+    authStatus.classList.toggle("success", Boolean(success));
+}
+
+
+function getKoreanAuthError(error) {
+    const message = String(error?.message || "").toLowerCase();
+
+    if (message.includes("invalid login credentials")) {
+        return "이메일 또는 비밀번호가 올바르지 않습니다.";
+    }
+
+    if (message.includes("email not confirmed")) {
+        return "이메일 확인을 완료한 뒤 로그인해 주세요.";
+    }
+
+    if (message.includes("user already registered")) {
+        return "이미 가입된 이메일입니다. 로그인해 주세요.";
+    }
+
+    if (
+        message.includes("valid email") ||
+        message.includes("email address is invalid")
+    ) {
+        return "올바른 이메일 주소를 입력해 주세요.";
+    }
+
+    if (
+        message.includes("password") &&
+        (message.includes("least") || message.includes("weak"))
+    ) {
+        return "비밀번호는 6자 이상으로 입력해 주세요.";
+    }
+
+    if (
+        message.includes("rate limit") ||
+        message.includes("security purposes")
+    ) {
+        return "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    if (
+        message.includes("fetch") ||
+        message.includes("network")
+    ) {
+        return "서버 연결 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    return "로그인 정보를 처리하지 못했습니다. 입력 내용을 확인해 주세요.";
+}
+
+
+function setAuthMode(mode, message = "") {
+    const signupMode = mode === "signup";
+
+    authDialogTitle.textContent = signupMode ? "회원가입" : "로그인";
+    loginForm.hidden = signupMode;
+    signupForm.hidden = !signupMode;
+    loginModeButton.classList.toggle("active", !signupMode);
+    signupModeButton.classList.toggle("active", signupMode);
+    loginModeButton.setAttribute("aria-selected", String(!signupMode));
+    signupModeButton.setAttribute("aria-selected", String(signupMode));
+    setAuthStatus(message);
+}
+
+
+function openAuthDialog(mode = "login", message = "") {
+    setAuthMode(mode, message);
+
+    if (!authDialog.open) {
+        authDialog.showModal();
+    }
+
+    window.setTimeout(() => {
+        (mode === "signup" ? signupEmail : loginEmail).focus();
+    }, 0);
+}
+
+
+function closeUserMenu() {
+    userMenu.hidden = true;
+    authButton.setAttribute("aria-expanded", "false");
+}
+
+
+function updateAuthUI() {
+    if (currentUser) {
+        authButton.textContent = currentUser.email || "내 계정";
+        authButton.title = currentUser.email || "내 계정";
+        userMenuEmail.textContent = currentUser.email || "로그인 사용자";
+        return;
+    }
+
+    authButton.textContent = "로그인";
+    authButton.title = "로그인 또는 회원가입";
+    closeUserMenu();
+}
+
+
+function renderLoginRequired(container, statusElement, message) {
+    container.replaceChildren();
+    statusElement.textContent = message;
+
+    const box = document.createElement("div");
+    box.className = "login-required";
+
+    const text = document.createElement("p");
+    text.textContent = message;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "primary-button compact-button";
+    button.textContent = "로그인하기";
+    button.addEventListener("click", () => openAuthDialog("login", message));
+
+    box.append(text, button);
+    container.appendChild(box);
+}
+
+
+function applySession(session) {
+    currentSession = session || null;
+    currentUser = session?.user || null;
+    favoriteNames = new Set();
+    updateAuthUI();
+}
+
+
+async function refreshVisiblePersonalFeature() {
+    const activeFeature = document.querySelector(
+        ".feature-tab.active"
+    )?.dataset?.target;
+
+    if (activeFeature === "history") {
+        await loadHistory();
+    } else if (activeFeature === "favorites") {
+        await loadFavorites();
+    } else if (activeFeature === "dictionary") {
+        await refreshFavoriteNames();
+        await renderDictionaryResults(false);
+    } else if (displayedEquipment) {
+        await refreshFavoriteNames();
+        updateDetailFavoriteButton();
+    }
+}
+
+
+async function getAccessToken() {
+    if (!authClient) {
+        return "";
+    }
+
+    const { data, error } = await authClient.auth.getSession();
+
+    if (error || !data?.session?.access_token) {
+        applySession(null);
+        return "";
+    }
+
+    if (data.session.access_token !== currentSession?.access_token) {
+        applySession(data.session);
+    }
+
+    return data.session.access_token;
+}
+
+
+function initializeAuth() {
+    if (authClient) {
+        return Promise.resolve(authClient);
+    }
+
+    if (authInitializationPromise) {
+        return authInitializationPromise;
+    }
+
+    authInitializationPromise = (async function () {
+        try {
+            if (!window.supabase?.createClient) {
+                throw new Error("Supabase client library unavailable");
+            }
+
+            const config = await requestJSON("/api/auth-config");
+
+            const client = window.supabase.createClient(
+                config.supabaseUrl,
+                config.supabaseKey,
+                {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true
+                    }
+                }
+            );
+
+            const { data, error } = await client.auth.getSession();
+
+            if (error) {
+                throw error;
+            }
+
+            authClient = client;
+            applySession(data?.session || null);
+
+            authClient.auth.onAuthStateChange((event, session) => {
+                applySession(session);
+
+                if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+                    window.setTimeout(() => {
+                        refreshVisiblePersonalFeature().catch(console.error);
+                    }, 0);
+                }
+            });
+
+            return authClient;
+        } catch (error) {
+            console.error("Auth initialization failed:", error);
+            authClient = null;
+            applySession(null);
+            authButton.disabled = false;
+            authButton.title = "로그인 기능 연결을 다시 시도합니다.";
+            return null;
+        } finally {
+            authInitializationPromise = null;
+        }
+    })();
+
+    return authInitializationPromise;
+}
+
+
+authButton.addEventListener("click", function () {
+    if (!currentUser) {
+        openAuthDialog("login");
+        return;
+    }
+
+    const opening = userMenu.hidden;
+    userMenu.hidden = !opening;
+    authButton.setAttribute("aria-expanded", String(opening));
+});
+
+
+authCloseButton.addEventListener("click", () => authDialog.close());
+loginModeButton.addEventListener("click", () => setAuthMode("login"));
+signupModeButton.addEventListener("click", () => setAuthMode("signup"));
+
+
+document.addEventListener("click", function (event) {
+    if (!event.target.closest(".auth-header")) {
+        closeUserMenu();
+    }
+});
+
+
+loginForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    loginSubmitButton.disabled = true;
+    setAuthStatus("로그인하고 있습니다.");
+
+    try {
+        const client = authClient || await initializeAuth();
+
+        if (!client) {
+            throw new Error("network");
+        }
+
+        const { data, error } = await client.auth.signInWithPassword({
+            email: loginEmail.value.trim(),
+            password: loginPassword.value
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        applySession(data.session);
+        loginPassword.value = "";
+        authDialog.close();
+        await refreshVisiblePersonalFeature();
+    } catch (error) {
+        setAuthStatus(getKoreanAuthError(error));
+    } finally {
+        loginSubmitButton.disabled = false;
+    }
+});
+
+
+signupForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    if (signupPassword.value !== signupPasswordConfirm.value) {
+        setAuthStatus("비밀번호 확인이 일치하지 않습니다.");
+        return;
+    }
+
+    signupSubmitButton.disabled = true;
+    setAuthStatus("회원가입을 처리하고 있습니다.");
+
+    try {
+        const client = authClient || await initializeAuth();
+
+        if (!client) {
+            throw new Error("network");
+        }
+
+        const { data, error } = await client.auth.signUp({
+            email: signupEmail.value.trim(),
+            password: signupPassword.value,
+            options: {
+                emailRedirectTo: window.location.origin
+            }
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        signupPassword.value = "";
+        signupPasswordConfirm.value = "";
+
+        if (data.session) {
+            applySession(data.session);
+            authDialog.close();
+            await refreshVisiblePersonalFeature();
+        } else {
+            setAuthStatus(
+                "회원가입 확인 이메일을 보냈습니다. 이메일 확인 후 로그인해 주세요.",
+                true
+            );
+        }
+    } catch (error) {
+        setAuthStatus(getKoreanAuthError(error));
+    } finally {
+        signupSubmitButton.disabled = false;
+    }
+});
+
+
+userMenuItems.forEach(function (item) {
+    item.addEventListener("click", async function () {
+        const action = item.dataset.userAction;
+        closeUserMenu();
+
+        if (action === "history" || action === "favorites") {
+            await openFeature(action);
+            return;
+        }
+
+        if (action === "logout" && authClient) {
+            try {
+                const { error } = await authClient.auth.signOut();
+
+                if (error) {
+                    throw error;
+                }
+
+                applySession(null);
+                await openFeature("analysis");
+            } catch (error) {
+                console.error("Logout failed:", error);
+                window.alert(
+                    "로그아웃 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
+                );
+            }
+        }
+    });
+});
 
 
 function normalizeSearchValue(value) {
@@ -367,15 +814,28 @@ function showImage(file) {
         return;
     }
 
+    const allowedTypes = new Set([
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+    ]);
 
-    if (!file.type.startsWith("image/")) {
-
-        alert(
-            "이미지 파일만 업로드할 수 있습니다."
-        );
-
+    if (!allowedTypes.has(file.type)) {
+        resetImage();
+        uploadStatus.textContent =
+            "이미지 파일만 업로드할 수 있습니다.";
         return;
     }
+
+    if (file.size > 10 * 1024 * 1024) {
+        resetImage();
+        uploadStatus.textContent =
+            "이미지 크기는 10MB 이하여야 합니다.";
+        return;
+    }
+
+    uploadStatus.textContent = "";
 
 
     currentFile = file;
@@ -527,6 +987,8 @@ function resetImage() {
 
     fileName.textContent = "";
 
+    uploadStatus.textContent = "";
+
 
     removeButton.style.display =
         "none";
@@ -674,45 +1136,19 @@ analyzeButton.addEventListener(
             /*
             AI 호출은 오직 여기
             */
-            const response =
-                await fetch(
-                    "/api/analyze",
-                    {
-
-                        method: "POST",
-
-                        headers: {
-
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify(
-                                {
-
-                                    image:
-                                        base64Image,
-
-                                    mimeType:
-                                        currentFile.type
-                                }
-                            )
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data.error ||
-                    "이미지 분석에 실패했습니다."
-                );
-            }
+            const data = await requestJSON(
+                "/api/analyze",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        image: base64Image,
+                        mimeType: currentFile.type
+                    })
+                }
+            );
 
 
             loadingSection.style.display =
@@ -798,6 +1234,8 @@ function showCandidates(
 
     selectedResult.textContent =
         "선택된 기구가 없습니다.";
+
+    candidateDetailStatus.textContent = "";
 
 
     lowConfidenceMessage.replaceChildren();
@@ -1002,40 +1440,25 @@ confirmButton.addEventListener(
 
         try {
 
-            const response =
-                await fetch(
-
-                    `/api/equipment?name=${encodeURIComponent(
-                        selectedEquipment.name
-                    )}`
-
-                );
-
-
-            const data =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data.error ||
-                    "기구 정보를 불러오지 못했습니다."
-                );
-            }
+            const data = await requestJSON(
+                `/api/equipment?name=${encodeURIComponent(
+                    selectedEquipment.name
+                )}`
+            );
 
 
             const equipment =
                 data.equipment;
 
 
-            await saveAnalysisHistory(
-                {
+            try {
+                await saveAnalysisHistory({
                     name: equipment.name,
-                    confidence:
-                        selectedEquipment.confidence
-                }
-            );
+                    confidence: selectedEquipment.confidence
+                });
+            } catch (historyError) {
+                console.error("Analysis history save failed:", historyError);
+            }
 
 
             displayedEquipment =
@@ -1117,10 +1540,16 @@ confirmButton.addEventListener(
             loadingSection.style.display =
                 "none";
 
-
-            showError(
-                error.message
-            );
+            if (
+                error.code === "EQUIPMENT_NOT_FOUND" ||
+                error.status === 404
+            ) {
+                resultSection.style.display = "block";
+                candidateDetailStatus.textContent =
+                    "해당 기구의 상세 정보가 아직 등록되어 있지 않습니다.";
+            } else {
+                showError(error.message);
+            }
         }
     }
 );
@@ -1193,6 +1622,8 @@ function goToUpload() {
 
     lowConfidenceMessage.textContent =
         "";
+
+    candidateDetailStatus.textContent = "";
 
 
     selectedResult.textContent =
@@ -1281,20 +1712,54 @@ async function openFeature(feature) {
    공통 API 처리
 ========================= */
 
-async function requestJSON(url, options) {
+async function requestJSON(url, options = {}, requiresAuth = false) {
+    const requestOptions = {
+        ...options,
+        headers: {
+            ...(options.headers || {})
+        }
+    };
 
-    const response = await fetch(
-        url,
-        options
-    );
+    if (requiresAuth) {
+        const accessToken = await getAccessToken();
 
-    const data = await response.json();
+        if (!accessToken) {
+            const authError = new Error("로그인이 필요합니다.");
+            authError.code = "AUTH_REQUIRED";
+            authError.status = 401;
+            throw authError;
+        }
+
+        requestOptions.headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    let response;
+
+    try {
+        response = await fetch(url, requestOptions);
+    } catch (error) {
+        console.error("Network request failed:", error);
+        throw new Error(
+            "서버 연결 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
+        );
+    }
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch {
+        data = {};
+    }
 
     if (!response.ok) {
-        throw new Error(
+        const requestError = new Error(
             data.error ||
-            "요청을 처리하지 못했습니다."
+            "서버 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
         );
+        requestError.status = response.status;
+        requestError.code = data.code || "REQUEST_FAILED";
+        throw requestError;
     }
 
     return data;
@@ -1319,6 +1784,10 @@ function formatDate(value) {
 
 async function saveAnalysisHistory(candidate) {
 
+    if (!currentUser) {
+        return;
+    }
+
     await requestJSON(
         "/api/history",
         {
@@ -1331,12 +1800,22 @@ async function saveAnalysisHistory(candidate) {
                 equipment_name: candidate.name,
                 confidence: candidate.confidence
             })
-        }
+        },
+        true
     );
 }
 
 
 async function loadHistory() {
+
+    if (!currentUser) {
+        renderLoginRequired(
+            historyList,
+            historyStatus,
+            "최근 기록을 보려면 로그인해 주세요."
+        );
+        return;
+    }
 
     historyStatus.textContent =
         "기록을 불러오고 있습니다.";
@@ -1346,7 +1825,9 @@ async function loadHistory() {
     try {
 
         const data = await requestJSON(
-            "/api/history?limit=50"
+            "/api/history?limit=50",
+            {},
+            true
         );
 
         const history = data.history || [];
@@ -1418,7 +1899,8 @@ async function loadHistory() {
                         try {
                             await requestJSON(
                                 `/api/history?id=${encodeURIComponent(item.id)}`,
-                                { method: "DELETE" }
+                                { method: "DELETE" },
+                                true
                             );
                             await loadHistory();
 
@@ -1448,8 +1930,15 @@ async function loadHistory() {
 
 async function refreshFavoriteNames() {
 
+    if (!currentUser) {
+        favoriteNames = new Set();
+        return [];
+    }
+
     const data = await requestJSON(
-        "/api/favorites"
+        "/api/favorites",
+        {},
+        true
     );
 
     favoriteNames = new Set(
@@ -1464,11 +1953,20 @@ async function refreshFavoriteNames() {
 
 async function toggleFavorite(name) {
 
+    if (!currentUser) {
+        const message = "즐겨찾기를 사용하려면 로그인해 주세요.";
+        openAuthDialog("login", message);
+        const error = new Error(message);
+        error.code = "AUTH_REQUIRED";
+        throw error;
+    }
+
     if (favoriteNames.has(name)) {
 
         await requestJSON(
             `/api/favorites?equipment_name=${encodeURIComponent(name)}`,
-            { method: "DELETE" }
+            { method: "DELETE" },
+            true
         );
 
         favoriteNames.delete(name);
@@ -1485,7 +1983,8 @@ async function toggleFavorite(name) {
                 body: JSON.stringify({
                     equipment_name: name
                 })
-            }
+            },
+            true
         );
 
         favoriteNames.add(name);
@@ -1500,7 +1999,9 @@ function updateDetailFavoriteButton() {
     }
 
     detailFavoriteButton.textContent =
-        favoriteNames.has(displayedEquipment.name)
+        !currentUser
+            ? "로그인 후 즐겨찾기"
+            : favoriteNames.has(displayedEquipment.name)
             ? "즐겨찾기 삭제"
             : "즐겨찾기 추가";
 }
@@ -1534,6 +2035,17 @@ detailFavoriteButton.addEventListener(
 
 
 async function loadFavorites() {
+
+    if (!currentUser) {
+        favoritesInitialNav.replaceChildren();
+        favoritesInitialNav.hidden = true;
+        renderLoginRequired(
+            favoritesList,
+            favoritesStatus,
+            "즐겨찾기를 사용하려면 로그인해 주세요."
+        );
+        return;
+    }
 
     favoritesStatus.textContent =
         "즐겨찾기를 불러오고 있습니다.";
@@ -2269,6 +2781,10 @@ async function saveDictionarySearch(
     categoryValue
 ) {
 
+    if (!currentUser) {
+        return;
+    }
+
     const parts = [];
 
     if (nameValue) {
@@ -2294,7 +2810,8 @@ async function saveDictionarySearch(
                 record_type: "search",
                 search_query: parts.join(" · ")
             })
-        }
+        },
+        true
     );
 }
 
@@ -2536,7 +3053,9 @@ function renderEquipmentCard(equipment) {
     favorite.type = "button";
     favorite.className =
         "secondary-button compact-button";
-    favorite.textContent = favoriteNames.has(equipment.name)
+    favorite.textContent = !currentUser
+        ? "로그인 후 즐겨찾기"
+        : favoriteNames.has(equipment.name)
         ? "즐겨찾기 삭제"
         : "즐겨찾기 추가";
 
@@ -2690,3 +3209,6 @@ function escapeHTML(value) {
             "&#039;"
         );
 }
+
+
+initializeAuth();

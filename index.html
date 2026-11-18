@@ -20,12 +20,26 @@
 
 <main class="container">
 
-    <header>
-        <h1>실험기구 이미지 인식 안내 서비스</h1>
+    <header class="site-header">
+        <div class="header-copy">
+            <h1>실험기구 이미지 인식 안내 서비스</h1>
 
-        <p class="description">
-            사용법을 알고 싶은 실험기구의 사진을 업로드하세요.
-        </p>
+            <p class="description">
+                사용법을 알고 싶은 실험기구의 사진을 업로드하세요.
+            </p>
+        </div>
+
+        <div class="auth-header">
+            <button id="authButton" class="auth-button" type="button" aria-haspopup="menu" aria-expanded="false">
+                로그인
+            </button>
+            <div id="userMenu" class="user-menu" role="menu" hidden>
+                <p id="userMenuEmail" class="user-menu-email"></p>
+                <button class="user-menu-item" data-user-action="history" role="menuitem" type="button">최근 기록</button>
+                <button class="user-menu-item" data-user-action="favorites" role="menuitem" type="button">즐겨찾기</button>
+                <button class="user-menu-item" data-user-action="logout" role="menuitem" type="button">로그아웃</button>
+            </div>
+        </div>
     </header>
 
     <nav class="feature-nav" aria-label="주요 기능">
@@ -53,10 +67,11 @@
             <input
                 type="file"
                 id="imageInput"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
             >
 
             <p id="fileName"></p>
+            <p id="uploadStatus" class="upload-status" role="status"></p>
 
 
             <div id="previewArea">
@@ -156,6 +171,8 @@
         <p id="selectedResult">
             선택된 기구가 없습니다.
         </p>
+
+        <p id="candidateDetailStatus" class="section-status" role="status"></p>
 
 
         <button
@@ -420,6 +437,51 @@
 
 </main>
 
+<dialog id="authDialog" class="auth-dialog" aria-labelledby="authDialogTitle">
+    <div class="auth-dialog-header">
+        <div>
+            <p class="auth-eyebrow">MY LAB GUIDE</p>
+            <h2 id="authDialogTitle">로그인</h2>
+        </div>
+        <button id="authCloseButton" class="auth-close-button" type="button" aria-label="로그인 창 닫기">×</button>
+    </div>
+
+    <div class="auth-mode-tabs" role="tablist" aria-label="로그인 또는 회원가입">
+        <button id="loginModeButton" class="auth-mode-button active" type="button" role="tab" aria-selected="true">로그인</button>
+        <button id="signupModeButton" class="auth-mode-button" type="button" role="tab" aria-selected="false">회원가입</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+        <label>
+            <span>이메일</span>
+            <input id="loginEmail" type="email" maxlength="254" autocomplete="email" required>
+        </label>
+        <label>
+            <span>비밀번호</span>
+            <input id="loginPassword" type="password" minlength="6" maxlength="72" autocomplete="current-password" required>
+        </label>
+        <button id="loginSubmitButton" class="primary-button" type="submit">로그인</button>
+    </form>
+
+    <form id="signupForm" class="auth-form" hidden>
+        <label>
+            <span>이메일</span>
+            <input id="signupEmail" type="email" maxlength="254" autocomplete="email" required>
+        </label>
+        <label>
+            <span>비밀번호</span>
+            <input id="signupPassword" type="password" minlength="6" maxlength="72" autocomplete="new-password" required>
+        </label>
+        <label>
+            <span>비밀번호 확인</span>
+            <input id="signupPasswordConfirm" type="password" minlength="6" maxlength="72" autocomplete="new-password" required>
+        </label>
+        <button id="signupSubmitButton" class="primary-button" type="submit">회원가입</button>
+    </form>
+
+    <p id="authStatus" class="auth-status" role="status"></p>
+</dialog>
+
 <dialog id="adminDialog" class="admin-dialog" aria-labelledby="adminDialogTitle">
     <div class="admin-dialog-header">
         <div>
@@ -456,7 +518,11 @@
     <button id="adminEntryButton" class="admin-entry-button" type="button" aria-label="관리자 검토실 열기">관리</button>
 </footer>
 
-
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"
+    integrity="sha384-gnyZit14c5lnGcarmA166QQjjJXpucw25ogZXuwH3HxxY904zHkBqmxVpelsPorb"
+    crossorigin="anonymous"
+></script>
 <script src="script.js"></script>
 
 </body>

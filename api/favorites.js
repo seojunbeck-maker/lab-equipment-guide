@@ -2,6 +2,10 @@ import {
     parseRequestBody,
     supabaseRequest
 } from "../lib/supabase-rest.js";
+import {
+    authRequiredResponse,
+    getAuthenticatedUser
+} from "../lib/user-auth.js";
 
 function normalizedEquipmentName(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -11,15 +15,22 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
 
     try {
+        const { accessToken, user } = await getAuthenticatedUser(req);
+
+        if (!user) {
+            return authRequiredResponse(res);
+        }
+
         if (req.method === "GET") {
             const params = new URLSearchParams({
                 select: "id,equipment_name,created_at",
+                user_id: `eq.${user.id}`,
                 order: "created_at.desc"
             });
 
             const { response, data } = await supabaseRequest(
                 "favorites",
-                { params }
+                { params, accessToken }
             );
 
             if (!response.ok) {
@@ -50,8 +61,12 @@ export default async function handler(req, res) {
                 "favorites",
                 {
                     method: "POST",
-                    body: { equipment_name: equipmentName },
-                    prefer: "return=representation"
+                    body: {
+                        user_id: user.id,
+                        equipment_name: equipmentName
+                    },
+                    prefer: "return=representation",
+                    accessToken
                 }
             );
 
@@ -91,12 +106,15 @@ export default async function handler(req, res) {
                 });
             }
 
+            params.set("user_id", `eq.${user.id}`);
+
             const { response, data } = await supabaseRequest(
                 "favorites",
                 {
                     method: "DELETE",
                     params,
-                    prefer: "return=representation"
+                    prefer: "return=representation",
+                    accessToken
                 }
             );
 

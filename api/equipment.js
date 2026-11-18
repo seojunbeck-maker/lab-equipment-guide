@@ -58,7 +58,8 @@ export default async function handler(req, res) {
 
         if (!match) {
             return res.status(404).json({
-                error: `"${name}"에 대한 정보가 아직 데이터베이스에 등록되어 있지 않습니다.`
+                code: "EQUIPMENT_NOT_FOUND",
+                error: "해당 기구의 상세 정보가 아직 등록되어 있지 않습니다."
             });
         }
 

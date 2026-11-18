@@ -85,6 +85,24 @@
 \- `/api/equipment-list`는 `group_category`, `english_name`, `aliases`, `key_features`를 포함하며 `name`과 `category` query를 지원한다.
 
 
+\## 6회차 사용자 인증 및 안정화
+
+
+\- Supabase Auth 이메일 회원가입, 로그인, 로그아웃과 브라우저 세션 유지를 지원한다.
+
+\- 공개 사전과 이미지 분석은 로그인 없이 계속 사용할 수 있다.
+
+\- `favorites`와 `analysis_history`는 `user_id`를 기준으로 사용자별 분리되며 RLS가 다른 사용자의 행 접근을 차단한다.
+
+\- 개인 데이터 API는 브라우저의 Supabase access token을 검증한 뒤 동일 토큰으로 Data API를 호출한다.
+
+\- 프론트에는 `SUPABASE_PUBLISHABLE_KEY`만 제공하며 secret/service role key는 노출하지 않는다.
+
+\- 잘못된 파일, 실험기구가 없는 사진, 미등록 기구, 네트워크 오류를 한국어 안내로 처리한다.
+
+\- 대표 기구 `시험관대`를 추가하고 `깔때기`, `집게` 별칭을 기존 데이터에 연결한다.
+
+
 \## 사전 등록 제안과 관리자 검토
 
 
