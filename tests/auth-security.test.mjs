@@ -6,6 +6,7 @@ import authConfigHandler, {
 } from "../api/auth-config.js";
 import favoritesHandler from "../api/favorites.js";
 import historyHandler from "../api/history.js";
+import signupHandler from "../api/signup.js";
 import { getBearerToken } from "../lib/user-auth.js";
 
 function createResponse() {
@@ -127,4 +128,74 @@ test("history API forwards the user token to RLS-protected reads", async () => {
     globalThis.fetch = previousFetch;
     process.env.SUPABASE_URL = previousUrl;
     process.env.SUPABASE_KEY = previousKey;
+});
+
+test("signup API validates input before calling the privileged function", async () => {
+    const previousFetch = globalThis.fetch;
+    let called = false;
+
+    globalThis.fetch = async () => {
+        called = true;
+        return new Response("{}", { status: 201 });
+    };
+
+    const res = createResponse();
+    await signupHandler({
+        method: "POST",
+        headers: { "x-forwarded-for": "198.51.100.10" },
+        body: {
+            email: "not-an-email",
+            password: "password"
+        }
+    }, res);
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(called, false);
+    globalThis.fetch = previousFetch;
+});
+
+test("signup API keeps the admin token server-side", async () => {
+    const previousUrl = process.env.SUPABASE_URL;
+    const previousKey = process.env.SUPABASE_KEY;
+    const previousToken = process.env.ADMIN_EDGE_TOKEN;
+    const previousFetch = globalThis.fetch;
+    let capturedRequest;
+
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_KEY = "sb_publishable_example";
+    process.env.ADMIN_EDGE_TOKEN = "server-only-token";
+
+    globalThis.fetch = async (url, options = {}) => {
+        capturedRequest = { url: String(url), options };
+        return new Response(JSON.stringify({ created: true }), {
+            status: 201
+        });
+    };
+
+    const res = createResponse();
+    await signupHandler({
+        method: "POST",
+        headers: { "x-forwarded-for": "198.51.100.11" },
+        body: {
+            email: "student@school.example",
+            password: "strong-password"
+        }
+    }, res);
+
+    assert.equal(res.statusCode, 201);
+    assert.equal(res.body.created, true);
+    assert.equal(
+        capturedRequest.url,
+        "https://example.supabase.co/functions/v1/create-app-user"
+    );
+    assert.equal(
+        capturedRequest.options.headers["x-admin-token"],
+        "server-only-token"
+    );
+    assert.equal(JSON.stringify(res.body).includes("server-only-token"), false);
+
+    globalThis.fetch = previousFetch;
+    process.env.SUPABASE_URL = previousUrl;
+    process.env.SUPABASE_KEY = previousKey;
+    process.env.ADMIN_EDGE_TOKEN = previousToken;
 });

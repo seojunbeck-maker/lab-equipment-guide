@@ -318,7 +318,12 @@ function setAuthStatus(message, success = false) {
 
 
 function getKoreanAuthError(error) {
-    const message = String(error?.message || "").toLowerCase();
+    const originalMessage = String(error?.message || "").trim();
+    const message = originalMessage.toLowerCase();
+
+    if (/[가-힣]/.test(originalMessage)) {
+        return originalMessage;
+    }
 
     if (message.includes("invalid login credentials")) {
         return "이메일 또는 비밀번호가 올바르지 않습니다.";
@@ -619,12 +624,20 @@ signupForm.addEventListener("submit", async function (event) {
             throw new Error("network");
         }
 
-        const { data, error } = await client.auth.signUp({
-            email: signupEmail.value.trim(),
-            password: signupPassword.value,
-            options: {
-                emailRedirectTo: window.location.origin
-            }
+        const email = signupEmail.value.trim();
+        const password = signupPassword.value;
+
+        await requestJSON("/api/signup", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email, password })
+        });
+
+        const { data, error } = await client.auth.signInWithPassword({
+            email,
+            password
         });
 
         if (error) {
@@ -634,16 +647,9 @@ signupForm.addEventListener("submit", async function (event) {
         signupPassword.value = "";
         signupPasswordConfirm.value = "";
 
-        if (data.session) {
-            applySession(data.session);
-            authDialog.close();
-            await refreshVisiblePersonalFeature();
-        } else {
-            setAuthStatus(
-                "회원가입 확인 이메일을 보냈습니다. 이메일 확인 후 로그인해 주세요.",
-                true
-            );
-        }
+        applySession(data.session);
+        authDialog.close();
+        await refreshVisiblePersonalFeature();
     } catch (error) {
         setAuthStatus(getKoreanAuthError(error));
     } finally {
