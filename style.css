@@ -578,12 +578,14 @@ button:disabled {
 .equipment-grid,
 .record-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
     margin-top: 20px;
 }
 
 .equipment-card,
 .record-card {
+    min-width: 0;
     padding: 18px;
     border: 1px solid #dddddd;
     border-radius: 10px;
@@ -599,6 +601,7 @@ button:disabled {
     color: #777777 !important;
     font-size: 13px;
     font-style: italic;
+    overflow-wrap: anywhere;
 }
 
 .initial-group-heading {
