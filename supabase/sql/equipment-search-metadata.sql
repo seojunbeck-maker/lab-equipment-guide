@@ -15,7 +15,7 @@ comment on column public.equipment.key_features is
 with metadata(name, english_name, aliases) as (
     values
         ('가변저항기', 'Rheostat', array['variable resistor']::text[]),
-        ('가스 포집병', 'Gas jar', array['gas collection jar']::text[]),
+        ('가스 포집병', 'Gas jar', array['gas collection jar', '집기병']::text[]),
         ('가지 달린 플라스크', 'Side-arm flask', array['distillation flask', 'side arm flask']::text[]),
         ('감압 플라스크', 'Filtering flask', array['Buchner flask', 'vacuum flask', 'filter flask']::text[]),
         ('고압증기멸균기', 'Autoclave', array['steam sterilizer']::text[]),
